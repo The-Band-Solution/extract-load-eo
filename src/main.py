@@ -1,4 +1,4 @@
-from extract_eo import ExtractEO
+from extract.extract_eo import ExtractEO
 
 def main():
     extractor = ExtractEO()
