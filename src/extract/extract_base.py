@@ -13,7 +13,7 @@ class ExtractBase(BaseModel):
 
     def model_post_init(self, __context):
         load_dotenv()
-        self.organization = os.getenv("GITHUB_REPOSITORY", "")
+        self.organization = os.getenv("GITHUB_ORG", "")
         self.token = os.getenv("GITHUB_TOKEN", "")
         self.fetch_data()
 
