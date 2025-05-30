@@ -11,7 +11,7 @@ Este projeto conecta-se à API do GitHub para extrair os dados de **times** e **
 - ✅ Modela com Pydantic (Team, Member, TeamWithMembers)
 - ✅ Persiste os dados em Neo4j com estrutura semântica:
   - `Person`, `Team`, `TeamMembership`, `TeamMember`, `OrganizationalRole`
-- ✅ Usa o driver oficial `neo4j-driver` (suporte oficial da Neo4j)
+
 
 ---
 

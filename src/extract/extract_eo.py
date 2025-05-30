@@ -1,11 +1,11 @@
 from extract.extract_base import ExtractBase
-from typing import List, Any
-from py2neo import Graph, Node, Relationship
+from typing import  Any
+from py2neo import Node, Relationship
 import os
 from dotenv import load_dotenv
 
 class ExtractEO (ExtractBase):
-    graph : Any = None
+   
     team_members: Any = None
     teams: Any = None
     
@@ -14,9 +14,15 @@ class ExtractEO (ExtractBase):
         load_dotenv()
         self.team_members = self.cache["team_members"]
         self.teams = self.cache["teams"]
-        self.graph = Graph(os.getenv("NEO4J_URI", ""), 
-                           auth=(os.getenv("NEO4J_USERNAME", ""),
-                                 os.getenv("NEO4J_PASSWORD", "")))
+        
+        
+    def fetch_data(self):
+       
+        self.cache = {
+            "team_members": self.client.get_teams_with_members(),
+            "teams": self.client.get_teams()
+        }
+
     
     def load(self):
         print("🔄 Carregando dados de Equipes e Membros...")
