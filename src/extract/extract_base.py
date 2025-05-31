@@ -22,6 +22,7 @@ class ExtractBase(BaseModel):
                            auth=(os.getenv("NEO4J_USERNAME", ""),
                                  os.getenv("NEO4J_PASSWORD", "")))
         
+
         self.fetch_data()
 
     def fech_data(self):

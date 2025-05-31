@@ -1,65 +1,59 @@
-# 🔗 GitHub Team Extractor + Neo4j Mapper
 
-Este projeto conecta-se à API do GitHub para extrair os dados de **times** e **membros** de uma organização, e os salva em um banco de dados **Neo4j** modelado com base na ontologia **SEON/UFO-C**.
+# 🔗 EO Extractor 
+
+This project connects to the GitHub API to extract **teams** and **members** from an organization and saves them to a **Neo4j** graph database modeled based on the **SEON/UFO-C ontology**.
 
 ---
 
-## 📌 Funcionalidades
+## 📌 Features
 
-- ✅ Busca todas as equipes da organização no GitHub
-- ✅ Busca os membros de cada equipe
-- ✅ Modela com Pydantic (Team, Member, TeamWithMembers)
-- ✅ Persiste os dados em Neo4j com estrutura semântica:
+- ✅ Fetches all teams from a GitHub organization
+- ✅ Retrieves members of each team
+- ✅ Models data using Pydantic (Team, Member, TeamWithMembers)
+- ✅ Persists data in Neo4j using a semantic structure:
   - `Person`, `Team`, `TeamMembership`, `TeamMember`, `OrganizationalRole`
 
-
 ---
 
-## 🧱 Estrutura Ontológica (SEON/UFO-C)
+## 🧱 Ontological Structure (SEON/UFO-C)
+
+The Enterprise Ontology (EO) aims at establishing a common conceptualization on the Entreprise domain, including organizations, organizational units, people, roles, teams and projects. 
+
+![texto alternativo](eo.png)
+
 
 ```plaintext
 (:Person)-[:ALLOCATES]->(:TeamMember)
 (:TeamMember)<-[:ALLOCATES]-(:TeamMembership)
 (:TeamMembership)-[:IS_TO_PLAY]->(:OrganizationalRole)
 (:TeamMembership)-[:DONE_FOR]->(:Team)
-```
+````
 
 ---
 
-## 🚀 Como executar
+## 🚀 How to Run
 
-### 1. Clone o repositório
+### 1. Clone the repositorys
 
-```bash
-git clone https://github.com/seu-usuario/github-neo4j-extractor.git
-cd github-neo4j-extractor
-```
-
-### 2. Instale as dependências
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Ou manualmente:
+### 3. Configure environment variables
 
-```bash
-pip install PyGithub neo4j pydantic
-```
-
-### 3. Configure suas variáveis
-
-Crie um arquivo `.env` com:
+Create a `.env` file with:
 
 ```
-GITHUB_TOKEN=ghp_seu_token
-GITHUB_ORG=nome-da-organizacao
+GITHUB_TOKEN=ghp_your_token
+GITHUB_ORG=your-org-name
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
-NEO4J_PASSWORD=sua_senha
+NEO4J_PASSWORD=your_password
 ```
 
-### 4. Execute o script principal
+### 4. Run the main script
 
 ```bash
 python src/main.py
@@ -67,29 +61,29 @@ python src/main.py
 
 ---
 
-## 🛠 Estrutura do Projeto
+## 🛠 Project Structure
 
 ```
 📁 src/
-├── main.py                # Ponto de entrada
-├── github_client.py       # Classe GitHubClient com PyGithub + Pydantic
-├── sync_neo4j.py          # Classe que envia para o Neo4j
+├── main.py                # Entry point
+├── github_client.py       # GitHubClient class using PyGithub + Pydantic
+├── sync_neo4j.py          # Class to send data to Neo4j
 📁 models/
-├── team.py                # Team e TeamWithMembers
+├── team.py                # Team and TeamWithMembers models
 ├── member.py              # MemberModel
 ```
 
 ---
 
-## 🔎 Visualização no Neo4j
+## 🔎 Visualizing in Neo4j
 
-Acesse:
+Access:
 
 ```
 http://localhost:7474
 ```
 
-E use estas queries:
+Then run these queries:
 
 ```cypher
 MATCH (n) RETURN n LIMIT 100
@@ -103,11 +97,9 @@ RETURN p, TeamMember, TeamMembership, OrganizationalRole, Team
 
 ---
 
-## 📦 Requisitos
+## 📦 Requirements
 
-- Python 3.8+
-- Neo4j Desktop ou Neo4j em Docker
-- GitHub Personal Access Token com scope `read:org`
-
----
+* Python 3.8+
+* Neo4j Desktop or Neo4j running in Docker
+* GitHub Personal Access Token with `read:org` scope
 
