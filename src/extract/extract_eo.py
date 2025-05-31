@@ -50,7 +50,7 @@ class ExtractEO (ExtractBase):
                 self.graph.merge(membership_node, "TeamMembership", "id")
 
                 # Relationships
-                self.graph.merge(Relationship(person_node, "allocates", team_member_node))
+                self.graph.merge(Relationship(team_member_node, "is", person_node))
                 self.graph.merge(Relationship(membership_node, "allocates", team_member_node))
                 self.graph.merge(Relationship(membership_node, "is_to_play", role_node))
                 self.graph.merge(Relationship(membership_node, "done_for", team_node))
