@@ -2,11 +2,10 @@ from pydantic import BaseModel
 from typing import List, Any
 import os
 from dotenv import load_dotenv
-from py2neo import Graph, Node, Relationship
+
 from source.github_client import GitHubClient
 
-class ExtractBase(BaseModel):
-    graph : Any = None
+class ExtractBase(BaseModel):   
     organization: str = ""
     token: str = ""
     cache: Any = None
@@ -17,13 +16,7 @@ class ExtractBase(BaseModel):
         self.organization = os.getenv("GITHUB_ORG", "")
         self.token = os.getenv("GITHUB_TOKEN", "")
         self.client = GitHubClient(self.token, self.organization)
+        self.fech_data()
         
-        self.graph = Graph(os.getenv("NEO4J_URI", ""), 
-                           auth=(os.getenv("NEO4J_USERNAME", ""),
-                                 os.getenv("NEO4J_PASSWORD", "")))
-        
-
-        self.fetch_data()
-
     def fech_data(self):
         pass
