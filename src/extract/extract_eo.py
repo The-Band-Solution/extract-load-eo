@@ -2,6 +2,7 @@ from extract.extract_base import ExtractBase
 from typing import  Any
 from py2neo import Node, Relationship
 from sink.sink_neo4j import SinkNeo4j
+
 class ExtractEO (ExtractBase):
    
     team_members: Any = None
@@ -20,7 +21,6 @@ class ExtractEO (ExtractBase):
             "team_members": self.client.get_teams_with_members(),
             "teams": self.client.get_teams()
         }
-
     
     def load(self):
         print("🔄 Carregando dados de Equipes e Membros...")
