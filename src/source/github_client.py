@@ -1,6 +1,6 @@
 from github import Github
 from typing import List
-from source.models import Team, TeamWithMember, Member
+from src.model.models import Team,  Member, TeamMembership
 
 class GitHubClient:
     def __init__(self, token: str, org_name: str):
@@ -28,10 +28,11 @@ class GitHubClient:
             ))
         return members
 
-    def get_teams_with_members(self) -> List[TeamWithMember]:
+    def get_teams_with_members(self) -> List[TeamMembership]:
         """Retorna uma lista de equipes com membros como objetos Pydantic."""
         teams_with_members = []
         for team in self.org.get_teams():
+            team_instance = Team(name=team.name, slug=team.slug)
             members = [
                 Member(
                     login=member.login,
@@ -43,7 +44,7 @@ class GitHubClient:
                 for member in team.get_members()
             ]
             teams_with_members.append(
-                TeamWithMember(name=team.name, slug=team.slug, members=members)
+                TeamMembership(name=team_instance.name, slug=team_instance.slug, team=team_instance, members=members)
             )
         return teams_with_members
 
