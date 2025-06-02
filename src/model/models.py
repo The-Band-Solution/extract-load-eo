@@ -2,6 +2,11 @@ from pydantic import BaseModel
 from typing import List
 from typing import Optional
 
+class Project(BaseModel):
+    name: str
+    id: str
+    number: int
+
 class Member(BaseModel):
     login: str
     name: Optional[str] = None

@@ -1,10 +1,12 @@
-from github import Github
+from github import Github,Auth  
 from typing import List
-from model.models import Team,  Member, TeamMembership
+from model.models import Team,  Member, TeamMembership,Project
+import requests
 
 class GitHubClient:
     def __init__(self, token: str, org_name: str):
-        self.github = Github(token)
+        self.token = token
+        self.github = Github(auth=Auth.Token(token)) 
         self.org = self.github.get_organization(org_name)
 
     def get_organization(self) -> str:
@@ -52,3 +54,64 @@ class GitHubClient:
             )
         return teams_with_members
 
+    def get_projects(self) -> List[Project]:
+        """Retorna todos os Projects (beta) da organização ou usuário via GraphQL."""
+        url = "https://api.github.com/graphql"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json"
+        }
+
+        # Verifica se é uma organização ou um usuário
+        is_org = hasattr(self.org, 'get_teams')  # truque simples usando PyGithub
+
+        if is_org:
+            entity_type = "organization"
+        else:
+            entity_type = "user"
+
+        query = f"""
+        query($login: String!, $after: String) {{
+        {entity_type}(login: $login) {{
+            projectsV2(first: 100, after: $after) {{
+            pageInfo {{
+                hasNextPage
+                endCursor
+            }}
+            nodes {{
+                id
+                title
+                number
+            }}
+            }}
+        }}
+        }}
+        """
+
+        projects = []
+        has_next_page = True
+        end_cursor = None
+
+        while has_next_page:
+            variables = {"login": self.org.login, "after": end_cursor}
+            response = requests.post(
+                url,
+                headers=headers,
+                json={"query": query, "variables": variables}
+            )
+
+            if response.status_code != 200:
+                raise Exception(f"Erro na requisição GraphQL: {response.text}")
+
+            data = response.json()
+            container = data["data"][entity_type]["projectsV2"]
+            projects.extend([
+                Project(name=project["title"], id=project["id"], number=project["number"])
+                for project in container["nodes"]
+            ])
+            has_next_page = container["pageInfo"]["hasNextPage"]
+            end_cursor = container["pageInfo"]["endCursor"]
+
+        return projects
+
+        
