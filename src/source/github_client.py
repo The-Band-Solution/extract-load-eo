@@ -1,11 +1,15 @@
 from github import Github
 from typing import List
-from src.model.models import Team,  Member, TeamMembership
+from model.models import Team,  Member, TeamMembership
 
 class GitHubClient:
     def __init__(self, token: str, org_name: str):
         self.github = Github(token)
         self.org = self.github.get_organization(org_name)
+
+    def get_organization(self) -> str:
+        """Retorna o nome da organização."""
+        return self.org.name
 
     def get_teams(self) -> List[Team]:
         """Retorna uma lista de equipes como objetos Pydantic."""

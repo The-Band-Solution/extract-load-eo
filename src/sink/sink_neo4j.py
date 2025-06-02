@@ -15,5 +15,8 @@ class SinkNeo4j (BaseModel):
                             os.getenv("NEO4J_PASSWORD", "")))
         
     
-    def save(self, element:Any, type:str, id_element:str):
+    def save_node(self, element:Any, type:str, id_element:str):
         self.graph.merge(element, type, id_element)
+    
+    def save_relationship(self, element:Relationship):
+        self.graph.merge(element)

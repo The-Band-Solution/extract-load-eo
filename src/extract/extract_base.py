@@ -8,7 +8,6 @@ from source.github_client import GitHubClient
 class ExtractBase(BaseModel):   
     organization: str = ""
     token: str = ""
-    cache: Any = None
     client: Any = None
     
     def model_post_init(self, __context):
@@ -16,7 +15,5 @@ class ExtractBase(BaseModel):
         self.organization = os.getenv("GITHUB_ORG", "")
         self.token = os.getenv("GITHUB_TOKEN", "")
         self.client = GitHubClient(self.token, self.organization)
-        self.fech_data()
         
-    def fech_data(self):
-        pass
+        

@@ -12,53 +12,58 @@ class ExtractEO (ExtractBase):
     def model_post_init(self, __context):
         super().model_post_init(__context)
         self.sink = SinkNeo4j()        
-        self.team_members = self.cache["team_members"]
-        self.teams = self.cache["teams"]
         
     def fetch_data(self):
-       
-        self.cache = {
-            "team_members": self.client.get_teams_with_members(),
-            "teams": self.client.get_teams()
-        }
+        self.team_members = self.client.get_teams_with_members()
+        self.teams = self.client.get_teams()
+        
     
     def load(self):
+        
         print("🔄 Carregando dados de Equipes e Membros...")
+        self.fetch_data()
+        print("🔄 Criando Organização...")
+    
+        organization_node = Node("Organization", name=self.client.get_organization())
+        self.sink.save_node(organization_node, "Organization", "name")
+        
         for team_members in self.team_members:
             team_slug = team_members.slug
             team_name = team_members.name
             team_node = Node("Team", slug=team_slug, name=team_name)
-            self.sink.save(team_node, "Team", "slug")
+            self.sink.save_node(team_node, "Team", "slug")
+            print("🔄 Criando Equipe...")
+        
+            # Create relationship between Organization and Team
+            self.sink.save_relationship(Relationship(organization_node, "has", team_node))
             
             role_node = Node("OrganizationalRole", name=team_name)
-            self.sink.save(role_node, "OrganizationalRole", "name")
+            self.sink.save_node(role_node, "OrganizationalRole", "name")
             
             for member in team_members.members:
                 # Create Person node
                 person_node = Node("Person", login=member.login, name=member.name or member.login)
-                self.sink.save(person_node, "Person", "login")
+                self.sink.save_node(person_node, "Person", "login")
                 
                 # Create TeamMember node
                 team_member_node = Node("TeamMember", id=f"{member.login}-{team_slug}")
-                self.sink.save(team_member_node, "TeamMember", "id")
+                self.sink.save_node(team_member_node, "TeamMember", "id")
                 
                 # TeamMembership node (mediação)
                 membership_id = f"membership-{member.login}-{team_slug}"
                 membership_node = Node("TeamMembership", id=membership_id)
-                self.sink.save(membership_node, "TeamMembership", "id")
+                self.sink.save_node(membership_node, "TeamMembership", "id")
 
                 # Relationships
-                self.sink.save(Relationship(team_member_node, "is", person_node))
-                self.sink.save(Relationship(membership_node, "allocates", team_member_node))
-                self.sink.save(Relationship(membership_node, "is_to_play", role_node))
-                self.sink.save(Relationship(membership_node, "done_for", team_node))
-            
+                self.sink.save_relationship(Relationship(team_member_node, "is", person_node))
+                self.sink.save_relationship(Relationship(membership_node, "allocates", team_member_node))
+                self.sink.save_relationship(Relationship(membership_node, "is_to_play", role_node))
+                self.sink.save_relationship(Relationship(membership_node, "done_for", team_node))
+                
         print("✅ Dados carregados com sucesso!")
     
     def run(self):
         print("🔄 Extraindo dados de Equipes e Membros...")
-        print(f"📊 Total de Membros: {len(self.team_members)}")
-        print(f"📊 Total de Equipes: {len(self.teams)}")
         print("✅ Extração concluída com sucesso!")
         self.load()
         
