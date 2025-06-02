@@ -1,6 +1,6 @@
 from github import Github,Auth  
 from typing import List
-from model.models import Team,  Member, TeamMembership,Project
+from model.models import Team,  Member, TeamMembership,Project,Milestone, Issue, Repository
 import requests
 
 class GitHubClient:
@@ -113,5 +113,97 @@ class GitHubClient:
             end_cursor = container["pageInfo"]["endCursor"]
 
         return projects
+ 
+    def get_repositories(self) -> List[Repository]:
+        """Retorna todos os repositórios com suas issues, milestones e autores/assignees detalhados."""
+        repositories: List[Repository] = []
 
+        for repo in self.org.get_repos():
+            issues: List[Issue] = []
+            milestones: List[Milestone] = []
+           
+            # Cria o objeto Repository
+            repositories.append(Repository(
+                name=repo.name,
+                full_name=repo.full_name,
+                html_url=repo.html_url,
+                issues=issues,
+                milestones=milestones
+            ))
+
+        return repositories
+
+    def get_milestones(self, full_repo_name: str) -> List[Milestone]:
         
+        repo = self.github.get_repo(full_repo_name)
+
+        milestones: List[Milestone] = [
+            Milestone(
+                title=ms.title,
+                description=ms.description,
+                due_on=ms.due_on,
+                open_issues=ms.open_issues,
+                closed_issues=ms.closed_issues,
+                state=ms.state,
+                url= ms.url
+
+            )
+            for ms in repo.get_milestones(state="all")
+        ]
+
+        return milestones
+  
+    def get_issues(self, full_repo_name: str) -> List[Issue]:
+        repo = self.github.get_repo(full_repo_name)
+        issues: List[Issue] = []
+
+        for issue in repo.get_issues(state="all"):
+            if issue.pull_request:
+                continue
+
+            assignees = [
+                Member(
+                    login=a.login,
+                    name=a.name,
+                    email=a.email,
+                    avatar_url=a.avatar_url,
+                    html_url=a.html_url
+                ) for a in issue.assignees
+            ]
+
+            author = issue.user
+            author_member = Member(
+                login=author.login,
+                name=author.name,
+                email=author.email,
+                avatar_url=author.avatar_url,
+                html_url=author.html_url
+            ) if author else None
+
+            milestone_obj = None
+            if issue.milestone:
+                ms = issue.milestone
+                milestone_obj = Milestone(
+                    title=ms.title,
+                    description=ms.description,
+                    state=ms.state,
+                    due_on=ms.due_on,
+                    open_issues=ms.open_issues,
+                    closed_issues=ms.closed_issues,
+                    url=ms.html_url
+                )
+
+            issues.append(Issue(
+                number=issue.number,
+                title=issue.title,
+                url=issue.html_url,
+                state=issue.state,
+                assignees=assignees,
+                author=author_member,
+                created_at=issue.created_at,
+                closed_at=issue.closed_at,
+                milestone=milestone_obj,
+                projects=[]  # projetos podem ser preenchidos em outra função
+            ))
+
+        return issues
