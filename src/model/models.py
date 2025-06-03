@@ -54,6 +54,7 @@ class Issue(BaseModel):
     milestone: Optional[Milestone] = None
     repository: Optional[str] = None  # Nome do repositório
     projects: List[Project] = []
+    type: Optional[str] = None  # Tipo da issue, se necessário
     
 class Repository(BaseModel):
     name: str

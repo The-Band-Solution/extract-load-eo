@@ -20,3 +20,7 @@ class SinkNeo4j (BaseModel):
     
     def save_relationship(self, element:Relationship):
         self.graph.merge(element)
+    
+    def get_node (self, type:str, id_element:str):
+        return self.graph.nodes.match(type, id=id_element).first()
+    

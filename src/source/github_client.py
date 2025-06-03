@@ -207,6 +207,7 @@ class GitHubClient:
 
                 )
 
+            issue_type = ", ".join(label.name.lower() for label in issue.labels)
             issues.append(Issue(
                 number=issue.number,
                 description=issue.body,
@@ -219,6 +220,7 @@ class GitHubClient:
                 created_at=issue.created_at.isoformat() if isinstance(issue.created_at, datetime) else None,
                 closed_at=issue.closed_at.isoformat() if isinstance(issue.closed_at, datetime) else None,
                 milestone=milestone_obj,
+                type=issue_type,
                 projects=[]  # projetos podem ser preenchidos em outra função
             ))
 

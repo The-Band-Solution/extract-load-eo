@@ -30,7 +30,7 @@ class ExtractCIRO (ExtractBase):
                               closed_issues=milestone.closed_issues,
                               due_on=milestone.due_on)
         
-        self.sink.save_node(milestone_node, "Milestone", "number")
+        self.sink.save_node(milestone_node, "Milestone", "id")
         print(f"🔄 Criando Milestone: {milestone.title}")
         
         self.sink.save_relationship(Relationship(repository_node, "has", milestone_node))
@@ -44,6 +44,7 @@ class ExtractCIRO (ExtractBase):
                         description=issue.description,
                         title=issue.title,
                         url=issue.url,
+                        type=issue.type,
                         state=issue.state,
                         created_at=issue.created_at,
                         closed_at=issue.closed_at)
@@ -55,10 +56,44 @@ class ExtractCIRO (ExtractBase):
         
         if issue.assignees:
             print(f"🔄 Associando Issue {issue.title} a Assignees")
+            for assignee in issue.assignees:
+                author_node = self.sink.get_node("Person", assignee.login)
+                if not author_node:
+                    author_node = Node("Person", 
+                                    id=issue.author.login, 
+                                    login=issue.author.login, 
+                                    name=issue.author.name or issue.author.login)
+                    
+                self.sink.save_node(author_node, "Person", "id")
+                print(f"🔄 Criando Autor: {issue.author.login}")
+             
+                ##Verificar se a pessoa existe
+                self.sink.save_relationship(Relationship(issue_node, "assignee", author_node))
+                ## Verificar se o autor existe            
+                print(f"🔄 Associando Issue {issue.title} ao assignee: {assignee.login}")
+                
         if issue.author:
-            print(f"🔄 Associando Issue {issue.title} ao Autor: {issue.author.login}")
+            print(f"🔄 Associando Issue {issue.title} ao Autor: {issue.author}")
+            author_node = self.sink.get_node("Person", issue.author.login)
+            if not author_node:
+                author_node = Node("Person", 
+                                   id=issue.author.login, 
+                                   login=issue.author.login, 
+                                   name=issue.author.name or issue.author.login)
+                
+                self.sink.save_node(author_node, "Person", "id")
+                print(f"🔄 Criando Autor: {issue.author.login}")
+            ##Verificar se a pessoa existe
+            self.sink.save_relationship(Relationship(issue_node, "createdby", author_node))
+            ## Verificar se o autor existe            
+            print(f"🔄 Associando Issue {issue.title} ao Autor: {author_node}")
+            
             
         if issue.milestone:
+            print(f"🔄 Associando Issue {issue.title} ao Milestone: {issue.milestone.title}")
+            milestone_node = self.sink.get_node("Milestone", f"{issue.milestone.number}-{repository_node['id']}")
+            self.sink.save_relationship(Relationship(milestone_node, "has", issue_node))
+            
             print(f"🔄 Associando Issue {issue.title} ao Milestone: {issue.milestone.title}")
         if issue.projects:
             print(f"🔄 Associando Issue {issue.title} a Projetos")
@@ -75,7 +110,8 @@ class ExtractCIRO (ExtractBase):
                                    id =f"{repository.full_name}", 
                                    name=repository.name, 
                                    full_name=repository.full_name, 
-                                   html_url=repository.html_url)    
+                                   html_url=repository.html_url)   
+             
             self.sink.save_node(repository_node, "Repository", "id")
             print(f"✅ Repositório {repository.name} adicionado")
             
