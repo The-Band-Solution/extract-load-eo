@@ -1,5 +1,5 @@
 from github import Github,Auth  
-from typing import List
+from typing import List,Dict, Tuple
 from model.models import Team,  Member, TeamMembership,Project,Milestone, Issue, Repository
 import requests
 from datetime import datetime
@@ -161,10 +161,74 @@ class GitHubClient:
 
         return milestones
   
+ 
+    def get_project_issue_map(self) -> Dict[Tuple[str, int], List[Project]]:
+        """
+        Retorna um dicionário {(repo_full_name, issue_number): [Project]} com issues associadas a projetos.
+        """
+        url = "https://api.github.com/graphql"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Content-Type": "application/json"
+        }
+
+        projects = self.get_projects()
+        issue_project_map: Dict[Tuple[str, int], List[Project]] = {}
+
+        query = """
+        query($projectId: ID!, $after: String) {
+        node(id: $projectId) {
+            ... on ProjectV2 {
+            items(first: 100, after: $after) {
+                pageInfo {
+                hasNextPage
+                endCursor
+                }
+                nodes {
+                content {
+                    ... on Issue {
+                    number
+                    repository {
+                        nameWithOwner
+                    }
+                    }
+                }
+                }
+            }
+            }
+        }
+        }
+        """
+
+        for project in projects:
+            has_next = True
+            cursor = None
+
+            while has_next:
+                variables = {"projectId": project.id, "after": cursor}
+                response = requests.post(url, headers=headers, json={"query": query, "variables": variables})
+
+                if response.status_code != 200:
+                    raise Exception(f"Erro ao buscar itens do projeto {project.name}: {response.text}")
+
+                data = response.json()["data"]["node"]["items"]
+                for node in data["nodes"]:
+                    content = node.get("content")
+                    if content and content.get("number"):
+                        key = (content["repository"]["nameWithOwner"], content["number"])
+                        issue_project_map.setdefault(key, []).append(project)
+
+                has_next = data["pageInfo"]["hasNextPage"]
+                cursor = data["pageInfo"]["endCursor"]
+
+        return issue_project_map
+
+  
     def get_issues(self, full_repo_name: str) -> List[Issue]:
         repo = self.github.get_repo(full_repo_name)
         issues: List[Issue] = []
-
+        issue_project_map = self.get_project_issue_map()
+        
         for issue in repo.get_issues(state="all"):
             if issue.pull_request:
                 continue
@@ -208,6 +272,10 @@ class GitHubClient:
                 )
 
             issue_type = ", ".join(label.name.lower() for label in issue.labels)
+            
+            key = (repo.full_name, issue.number)
+            projects = issue_project_map.get(key, [])
+            print (f"Projects associated with issue {issue.number}: {[project.name for project in projects]}")
             issues.append(Issue(
                 number=issue.number,
                 description=issue.body,
@@ -221,7 +289,7 @@ class GitHubClient:
                 closed_at=issue.closed_at.isoformat() if isinstance(issue.closed_at, datetime) else None,
                 milestone=milestone_obj,
                 type=issue_type,
-                projects=[]  # projetos podem ser preenchidos em outra função
+                projects=projects  # projetos podem ser preenchidos em outra função
             ))
 
         return issues

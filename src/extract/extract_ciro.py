@@ -96,6 +96,17 @@ class ExtractCIRO (ExtractBase):
             
             print(f"🔄 Associando Issue {issue.title} ao Milestone: {issue.milestone.title}")
         if issue.projects:
+            for project in issue.projects:
+                project_node = self.sink.get_node("Project", project.id)
+                if not project_node:
+                    project_node = Node("Project", 
+                                        id=project.id, 
+                                        name=project.name, 
+                                        number=project.number)
+                    self.sink.save_node(project_node, "Project", "id")
+                    print(f"🔄 Criando Projeto: {project.name}")
+                
+                self.sink.save_relationship(Relationship(issue_node, "associated_with", project_node))
             print(f"🔄 Associando Issue {issue.title} a Projetos")
     
     def load(self):

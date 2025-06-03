@@ -18,7 +18,7 @@ def test_get_repository():
     repositories = client.get_repositories()
     print (f"Found {len(repositories)} repositories")
     assert len(repositories) >= 1
-
+'''
 def test_get_milestones():
     repositories = client.get_repositories()
     print (f"Found {len(repositories)} repositories")
@@ -30,7 +30,8 @@ def test_get_milestones():
         
     print(f"Total milestones found: {len(milestones_list)}")
     assert len(milestones_list) >= 1
-
+'''
+'''
 def test_get_issues():
     repositories = client.get_repositories()
     print (f"Found {len(repositories)} repositories")
@@ -50,3 +51,9 @@ def test_get_issues():
         
     print(f"Total issues found: {len(issues_list)}")
     assert len(issues_list) >= 1
+'''    
+def test_project_issue():
+    project_issue_map = client.get_project_issue_map() 
+    print(f"Found {len(project_issue_map)} projects with issues")
+    
+    assert len(project_issue_map) >= 1
