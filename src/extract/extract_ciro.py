@@ -57,6 +57,7 @@ class ExtractCIRO (ExtractBase):
             print(f"🔄 Associando Issue {issue.title} a Assignees")
         if issue.author:
             print(f"🔄 Associando Issue {issue.title} ao Autor: {issue.author.login}")
+            
         if issue.milestone:
             print(f"🔄 Associando Issue {issue.title} ao Milestone: {issue.milestone.title}")
         if issue.projects:

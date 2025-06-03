@@ -39,6 +39,14 @@ def test_get_issues():
         issues = client.get_issues(repository.full_name)
         print(f"Found {len(issues)} issues in {repository.name}")
         issues_list.extend(issues)
+        for issue in issues:
+            print(f"Issue #{issue.number}: {issue.title} - State: {issue.state}")
+            if issue.assignees:
+                print(f"Assignees: {[assignee.login for assignee in issue.assignees]}")
+            if issue.author:
+                print(f"Author: {issue.author.login}")
+            if issue.milestone:
+                print(f"Milestone: {issue.milestone.title}")
         
     print(f"Total issues found: {len(issues_list)}")
     assert len(issues_list) >= 1
