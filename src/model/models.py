@@ -26,25 +26,33 @@ class TeamMembership(BaseModel):
     slug: str
 
 class Milestone(BaseModel):
+    number: int
     title: str
     description: Optional[str]
     state: str
-    due_on: Optional[datetime]
+    due_on: Optional[str] = None  # Formato ISO 8601
     open_issues: int
     closed_issues: int
     url: str
+    creator: Optional[str] = None
+    created_at: Optional[str] = None
+    closed_at: Optional[str] = None
+    update_at: Optional[str] = None
+
 
 
 class Issue(BaseModel):
     number: int
     title: str
+    description: Optional[str] = None
     url: str
     state: str
     assignees: Optional[List[Member]]
     author: Optional[Member] = None  # 👈 Adicionado aqui
-    created_at: datetime
-    closed_at: Optional[datetime] = None
+    created_at: str
+    closed_at: Optional[str] = None
     milestone: Optional[Milestone] = None
+    repository: Optional[str] = None  # Nome do repositório
     projects: List[Project] = []
     
 class Repository(BaseModel):

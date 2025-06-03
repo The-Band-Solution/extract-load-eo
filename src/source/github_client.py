@@ -2,6 +2,7 @@ from github import Github,Auth
 from typing import List
 from model.models import Team,  Member, TeamMembership,Project,Milestone, Issue, Repository
 import requests
+from datetime import datetime
 
 class GitHubClient:
     def __init__(self, token: str, org_name: str):
@@ -139,17 +140,24 @@ class GitHubClient:
 
         milestones: List[Milestone] = [
             Milestone(
+                number=ms.number,
                 title=ms.title,
                 description=ms.description,
-                due_on=ms.due_on,
+                due_on=ms.due_on.isoformat() if isinstance(ms.due_on, datetime) else None,
                 open_issues=ms.open_issues,
                 closed_issues=ms.closed_issues,
                 state=ms.state,
-                url= ms.url
+                url= ms.url,
+                creator=ms.creator.login if ms.creator else None,
+                created_at=ms.created_at.isoformat() if isinstance(ms.created_at, datetime) else None,
+                closed_at=ms.closed_at.isoformat() if isinstance(ms.closed_at, datetime) else None,
+                update_at = ms.updated_at.isoformat() if isinstance(ms.updated_at, datetime) else None
 
             )
             for ms in repo.get_milestones(state="all")
         ]
+        
+        
 
         return milestones
   
@@ -184,24 +192,32 @@ class GitHubClient:
             if issue.milestone:
                 ms = issue.milestone
                 milestone_obj = Milestone(
+                    number=ms.number,
                     title=ms.title,
                     description=ms.description,
                     state=ms.state,
-                    due_on=ms.due_on,
+                    due_on=ms.due_on.isoformat() if isinstance(ms.due_on, datetime) else None,
                     open_issues=ms.open_issues,
                     closed_issues=ms.closed_issues,
-                    url=ms.html_url
+                    url=ms.html_url,
+                    creator=ms.creator.login if ms.creator else None,
+                    created_at=ms.created_at.isoformat() if isinstance(ms.created_at, datetime) else None,
+                    closed_at=ms.closed_at.isoformat() if isinstance(ms.closed_at, datetime) else None,
+                    update_at = ms.updated_at.isoformat() if isinstance(ms.updated_at, datetime) else None
+
                 )
 
             issues.append(Issue(
                 number=issue.number,
+                description=issue.body,
+                repository=repo.name,  # Nome do repositório
                 title=issue.title,
                 url=issue.html_url,
                 state=issue.state,
                 assignees=assignees,
                 author=author_member,
-                created_at=issue.created_at,
-                closed_at=issue.closed_at,
+                created_at=issue.created_at.isoformat() if isinstance(issue.created_at, datetime) else None,
+                closed_at=issue.closed_at.isoformat() if isinstance(issue.closed_at, datetime) else None,
                 milestone=milestone_obj,
                 projects=[]  # projetos podem ser preenchidos em outra função
             ))
