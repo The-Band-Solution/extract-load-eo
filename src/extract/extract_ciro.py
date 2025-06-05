@@ -9,16 +9,47 @@ class ExtractCIRO (ExtractBase):
     repositories: List[Repository] = None
     sink: Any = None
     
+    issue_milestones: Any = None
+    issues: Any = None
+    pull_request_commits: Any = None
+    issue_labels: Any = None
+    repositories_: Any = None
+    projects: Any = None
+    
+    
     def model_post_init(self, __context):
-        self.streams = ['issue_milestones',  'issues',  'pull_request_commits','issue_labels']
+        self.streams = ['issue_milestones',  'issues',  'pull_request_commits','issue_labels','repositories','projects_v2']
         
         super().model_post_init(__context)
         self.sink = SinkNeo4j()        
         
     def fetch_data(self):
         self.load_data()
+        
+        if "issue_milestones" in self.cache:
+            self.issue_milestones = self.cache["issue_milestones"].to_pandas()
+            print(f"✅ {len(self.issue_milestones)} issue_milestones carregadas.")
+        
+        if "issues" in self.cache:
+            self.issues = self.cache["issues"].to_pandas()
+            print(f"✅ {len(self.issues)} issues carregadas.")
        
-        #self.repositories = self.client.get_repositories()
+        if "pull_request_commits" in self.cache:
+            self.pull_request_commits = self.cache["pull_request_commits"].to_pandas()
+            print(f"✅ {len(self.pull_request_commits)} pull_request_commits carregadas.")
+        
+        if "issue_labels" in self.cache:
+            self.issue_labels = self.cache["issue_labels"].to_pandas()
+            print(f"✅ {len(self.issue_labels)} issue_labels carregadas.")
+       
+        if "repositories" in self.cache:
+            self.repositories = self.cache["repositories"].to_pandas()
+            print(f"✅ {len(self.repositories)} repositories carregadas.") 
+        
+        if "projects_v2" in self.cache:
+            self.projects = self.cache["projects"].to_pandas()
+            print(f"✅ {len(self.projects)} projects carregadas.")
+       
     
     def __create_milestone_node(self, milestone, repository_node):
         
