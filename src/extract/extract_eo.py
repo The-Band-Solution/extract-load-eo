@@ -8,17 +8,45 @@ class ExtractEO (ExtractBase):
    
     team_members: Any = None
     teams: Any = None
-    projects: List[Project] = None
+    projects: Any = None
+    team_memberships: Any = None
+    users: Any = None
     sink: Any = None
     
     def model_post_init(self, __context):
+        self.streams = ["projects_v2", 'teams', 'team_members', 'users', 'team_memberships']
         super().model_post_init(__context)
+       
+            
         self.sink = SinkNeo4j()        
         
     def fetch_data(self):
-        self.team_members = self.client.get_teams_with_members()
-        self.teams = self.client.get_teams()
-        self.projects = self.client.get_projects()
+        self.load_data()
+        
+        if "teams" in self.cache:
+            self.teams = self.cache["teams"].to_pandas()
+            print(f"✅ {len(self.teams)} teams carregadas.")
+        
+        if "projects_v2" in self.cache:
+            self.projects = self.cache["projects_v2"].to_pandas()
+            print(f"✅ {len(self.projects)} projects_v2 carregadas.")
+       
+        if "team_members" in self.cache:
+            self.team_members = self.cache["team_members"].to_pandas()
+            print(f"✅ {len(self.team_members)} team_members carregadas.")
+            
+        if "users" in self.cache:
+            self.users = self.cache["users"].to_pandas()
+            print(f"✅ {len(self.users)} users carregadas.")
+        
+        if "team_memberships" in self.cache:
+            self.team_memberships = self.cache["team_memberships"].to_pandas()
+            print(f"✅ {len(self.team_memberships)} team_memberships carregadas.")
+        
+        
+        #self.team_members = self.client.get_teams_with_members()
+        #self.teams = self.client.get_teams()
+        #self.projects = self.client.get_projects()
     
     def load(self):
         
@@ -29,6 +57,7 @@ class ExtractEO (ExtractBase):
         organization_node = Node("Organization", 
                                  id = self.client.get_organization(),
                                  name=self.client.get_organization())
+        
         self.sink.save_node(organization_node, "Organization", "id")
         
         for project in self.projects:
@@ -95,5 +124,6 @@ class ExtractEO (ExtractBase):
     def run(self):
         print("🔄 Extraindo dados de Equipes e Membros...")
         print("✅ Extração concluída com sucesso!")
-        self.load()
+        self.fetch_data()
+        #self.load()
         

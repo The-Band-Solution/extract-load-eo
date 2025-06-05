@@ -10,11 +10,15 @@ class ExtractCIRO (ExtractBase):
     sink: Any = None
     
     def model_post_init(self, __context):
+        self.streams = ['issue_milestones',  'issues',  'pull_request_commits',]
+        
         super().model_post_init(__context)
         self.sink = SinkNeo4j()        
         
     def fetch_data(self):
-        self.repositories = self.client.get_repositories()
+        self.load_data()
+       
+        #self.repositories = self.client.get_repositories()
     
     def __create_milestone_node(self, milestone, repository_node):
         
@@ -143,4 +147,6 @@ class ExtractCIRO (ExtractBase):
     def run(self):
         print("🔄 Extraindo dados de Repositorios...")
         print("✅ Extração concluída com sucesso!")
-        self.load()
+        self.fetch_data()
+       
+        #self.load()
