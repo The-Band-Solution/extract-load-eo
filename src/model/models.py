@@ -7,6 +7,8 @@ class Project(BaseModel):
     name: str
     id: str
     number: int
+    short_description:Optional[str] = None
+    url:Optional[str] = None
 
 class Member(BaseModel):
     login: str

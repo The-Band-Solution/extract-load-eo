@@ -10,7 +10,7 @@ class ExtractCIRO (ExtractBase):
     sink: Any = None
     
     def model_post_init(self, __context):
-        self.streams = ['issue_milestones',  'issues',  'pull_request_commits',]
+        self.streams = ['issue_milestones',  'issues',  'pull_request_commits','issue_labels']
         
         super().model_post_init(__context)
         self.sink = SinkNeo4j()        

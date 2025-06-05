@@ -4,8 +4,8 @@ def main():
     extractor = ExtractEO()
     extractor.run()
     
-    extractor = ExtractCIRO()
-    extractor.run()
+    #extractor = ExtractCIRO()
+    #extractor.run()
 
 if __name__ == "__main__":
     main()
