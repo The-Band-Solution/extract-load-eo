@@ -100,6 +100,7 @@ class ExtractCIRO (ExtractBase):
         
         for issue in self.issues.itertuples(index=False):
             data = self.trasnform(issue)
+            print (data)
             
             node = Node("Issue", **data)
             self.sink.save_node(node, "Issue", "id")
@@ -116,6 +117,26 @@ class ExtractCIRO (ExtractBase):
                     milestone_node = self.milestones_dict[milestone.id]
                     self.sink.save_relationship(Relationship(milestone_node, "has", node))
                     print(f"🔄 Criando relacionamento entre Milestone e Issue: {issue.title}-{milestone.id}")
+            
+            if issue.user:
+                user = json.loads(issue.user, object_hook=lambda d: SimpleNamespace(**d))
+                user_node = self.sink.get_node("Person", user.login)
+                self.sink.save_relationship(Relationship(node, "created_by", user_node))
+                print(f"🔄 Criando relacionamento entre User e Issue: {user.login}-{issue.title}")                
+            
+            if issue.assignee:
+                user = json.loads(issue.assignee, object_hook=lambda d: SimpleNamespace(**d))
+                user_node = self.sink.get_node("Person", user.login)
+                self.sink.save_relationship(Relationship(node, "assigneed_by", user_node))
+                print(f"🔄 Criando relacionamento entre Assignee e Issue: {user.login}-{issue.title}")  
+            
+            if issue.assignees:
+                print (issue.assignees)
+                for assignee in issue.assignees:
+                    user = json.loads(assignee, object_hook=lambda d: SimpleNamespace(**d))
+                    user_node = self.sink.get_node("Person", user.login)
+                    self.sink.save_relationship(Relationship(node, "assigneed_by", user_node))
+                    print(f"🔄 Criando relacionamento entre Assignees e Issue: {user.login}-{issue.title}")  
                             
                 
            
