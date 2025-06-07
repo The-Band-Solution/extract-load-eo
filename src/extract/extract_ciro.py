@@ -1,34 +1,38 @@
 from extract.extract_base import ExtractBase
-from typing import  Any, List
+from typing import  Any, Dict
 from py2neo import Node, Relationship
 from sink.sink_neo4j import SinkNeo4j
-from model.models import Repository
+import json
+from types import SimpleNamespace
 
 class ExtractCIRO (ExtractBase):
    
-    repositories: List[Repository] = None
-    sink: Any = None
     
-    issue_milestones: Any = None
+    milestones: Any = None
+    milestones_dict: Dict[str, Any] = {}
+    
     issues: Any = None
     pull_request_commits: Any = None
     issue_labels: Any = None
-    repositories_: Any = None
+    organization_node: Any = None
+    
+    repositories: Any = None
+    repositories_dict: Dict[str, Any] = {}
+    
     projects: Any = None
     
     
     def model_post_init(self, __context):
-        self.streams = ['issue_milestones',  'issues',  'pull_request_commits','issue_labels','repositories','projects_v2']
-        
+        #self.streams = [  ,  'pull_request_commits','issue_labels','repositories','projects_v2']
+        self.streams = ['repositories','projects_v2','issue_milestones','issues']
         super().model_post_init(__context)
-        self.sink = SinkNeo4j()        
         
     def fetch_data(self):
         self.load_data()
         
         if "issue_milestones" in self.cache:
-            self.issue_milestones = self.cache["issue_milestones"].to_pandas()
-            print(f"✅ {len(self.issue_milestones)} issue_milestones carregadas.")
+            self.milestones = self.cache["issue_milestones"].to_pandas()
+            print(f"✅ {len(self.milestones)} issue_milestones carregadas.")
         
         if "issues" in self.cache:
             self.issues = self.cache["issues"].to_pandas()
@@ -47,137 +51,89 @@ class ExtractCIRO (ExtractBase):
             print(f"✅ {len(self.repositories)} repositories carregadas.") 
         
         if "projects_v2" in self.cache:
-            self.projects = self.cache["projects"].to_pandas()
+            self.projects = self.cache["projects_v2"].to_pandas()
             print(f"✅ {len(self.projects)} projects carregadas.")
        
-    
-    def __create_milestone_node(self, milestone, repository_node):
+     
+    def __load_repository(self):
         
-        # falta colocar a datade conclusao
-        milestone_node = Node("Milestone", 
-                              id=f"{milestone.number}-{repository_node['id']}",	
-                              number=milestone.number,
-                              title=milestone.title, 
-                              description=milestone.description,
-                              url=milestone.url, 
-                              state=milestone.state, 
-                              open_issues=milestone.open_issues, 
-                              closed_issues=milestone.closed_issues,
-                              due_on=milestone.due_on)
-        
-        self.sink.save_node(milestone_node, "Milestone", "id")
-        print(f"🔄 Criando Milestone: {milestone.title}")
-        
-        self.sink.save_relationship(Relationship(repository_node, "has", milestone_node))
-        print(f"🔄 Criando relacionamento entre Repositório e Milestone: {milestone.title}")
-        
-    def __create_issue_node(self, issue, repository_node):
-        ## Falta associar ao milestone, a pessoa e projetos
-        issue_node = Node("Issue", 
-                        id =f"{issue.number}-{repository_node['id']}",
-                        number=issue.number,
-                        description=issue.description,
-                        title=issue.title,
-                        url=issue.url,
-                        type=issue.type,
-                        state=issue.state,
-                        created_at=issue.created_at,
-                        closed_at=issue.closed_at)
-                        
-        self.sink.save_node(issue_node, "Issue", "id")
-        print(f"🔄 Criando Issue: {issue.title}")
-        self.sink.save_relationship(Relationship(repository_node, "has", issue_node))
-        print(f"🔄 Criando relacionamento entre Repositório e Issue: {issue.title}")
-        
-        if issue.assignees:
-            print(f"🔄 Associando Issue {issue.title} a Assignees")
-            for assignee in issue.assignees:
-                author_node = self.sink.get_node("Person", assignee.login)
-                if not author_node:
-                    author_node = Node("Person", 
-                                    id=issue.author.login, 
-                                    login=issue.author.login, 
-                                    name=issue.author.name or issue.author.login)
-                    
-                self.sink.save_node(author_node, "Person", "id")
-                print(f"🔄 Criando Autor: {issue.author.login}")
-             
-                ##Verificar se a pessoa existe
-                self.sink.save_relationship(Relationship(issue_node, "assignee", author_node))
-                ## Verificar se o autor existe            
-                print(f"🔄 Associando Issue {issue.title} ao assignee: {assignee.login}")
-                
-        if issue.author:
-            print(f"🔄 Associando Issue {issue.title} ao Autor: {issue.author}")
-            author_node = self.sink.get_node("Person", issue.author.login)
-            if not author_node:
-                author_node = Node("Person", 
-                                   id=issue.author.login, 
-                                   login=issue.author.login, 
-                                   name=issue.author.name or issue.author.login)
-                
-                self.sink.save_node(author_node, "Person", "id")
-                print(f"🔄 Criando Autor: {issue.author.login}")
-            ##Verificar se a pessoa existe
-            self.sink.save_relationship(Relationship(issue_node, "createdby", author_node))
-            ## Verificar se o autor existe            
-            print(f"🔄 Associando Issue {issue.title} ao Autor: {author_node}")
+        for repository in self.repositories.itertuples():
+            data = self.trasnform(repository)
+            repository_node = Node("Repository",**data)
             
-            
-        if issue.milestone:
-            print(f"🔄 Associando Issue {issue.title} ao Milestone: {issue.milestone.title}")
-            milestone_node = self.sink.get_node("Milestone", f"{issue.milestone.number}-{repository_node['id']}")
-            self.sink.save_relationship(Relationship(milestone_node, "has", issue_node))
-            
-            print(f"🔄 Associando Issue {issue.title} ao Milestone: {issue.milestone.title}")
-        if issue.projects:
-            for project in issue.projects:
-                project_node = self.sink.get_node("Project", project.id)
-                if not project_node:
-                    project_node = Node("Project", 
-                                        id=project.id, 
-                                        name=project.name, 
-                                        number=project.number)
-                    self.sink.save_node(project_node, "Project", "id")
-                    print(f"🔄 Criando Projeto: {project.name}")
-                
-                self.sink.save_relationship(Relationship(issue_node, "associated_with", project_node))
-            print(f"🔄 Associando Issue {issue.title} a Projetos")
-    
-    def load(self):
-        self.fetch_data()
-        organization_node = Node("Organization", 
-                                 id = self.client.get_organization(),
-                                 name=self.client.get_organization())
-        self.sink.save_node(organization_node, "Organization", "id")
-        
-        for repository in self.repositories:
-            repository_node = Node("Repository",
-                                   id =f"{repository.full_name}", 
-                                   name=repository.name, 
-                                   full_name=repository.full_name, 
-                                   html_url=repository.html_url)   
-             
             self.sink.save_node(repository_node, "Repository", "id")
             print(f"✅ Repositório {repository.name} adicionado")
             
-            self.sink.save_relationship(Relationship(organization_node, "has", repository_node))
+            self.sink.save_relationship(Relationship(self.organization_node, "has", repository_node))
             print(f"🔄 Criando relacionamento entre Organização e Repositório: {repository.name}")
             
-            milestones = self.client.get_milestones(repository.full_name)
+            self.repositories_dict[repository.full_name] = repository_node
+    
+    def __load_repository_project(self):
+           
+        for project in self.projects.itertuples():
             
-            for milestone in milestones:
-               self.__create_milestone_node(milestone, repository_node)
-            
-            issues = self.client.get_issues(repository.full_name)
-            for issue in issues:
-                self.__create_issue_node(issue, repository_node)
+            if project.repository in self.repositories_dict:
+                repository_node = self.repositories_dict[project.repository]
+                project_node = self.sink.get_node("Project",project.id)
                 
-            print(f"🔄 Repositório {repository.name} processado com sucesso!")
-               
+                if repository_node and project_node:
+                    self.sink.save_relationship(Relationship(project_node, "has", repository_node))
+                    print(f"🔄 Criando relacionamento entre Repositorio e Projeto: {project.title}--{project.repository}")
+                
+    def __load_milestones (self):
+        
+        for milestone in self.milestones.itertuples(index=False):
+            data = self.trasnform(milestone)
+            milestone_node = Node("Milestone", **data)
+            
+            repository_node = self.repositories_dict[milestone.repository]
+            self.sink.save_node(milestone_node, "Milestone", "id")
+            print(f"🔄 Criando Milestone: {milestone.title}")
+            
+            self.milestones_dict[milestone.id] = milestone_node
+            
+            self.sink.save_relationship(Relationship(repository_node, "has", milestone_node))
+            print(f"🔄 Criando relacionamento entre Repositório e Milestone: {milestone.title}--{milestone.repository}")
+            
+    def __load_issue(self):
+        
+        for issue in self.issues.itertuples(index=False):
+            data = self.trasnform(issue)
+            
+            node = Node("Issue", **data)
+            self.sink.save_node(node, "Issue", "id")
+            print(f"🔄 Criando Issue: {issue.title}")
+            
+            # Criando a relaçao entre repositorio e issue
+            repository_node = self.repositories_dict[issue.repository]
+            self.sink.save_relationship(Relationship(repository_node, "has", node))
+            print(f"🔄 Criando relacionamento entre Repositório e Issue: {issue.title}-{issue.repository}")
+            
+            if issue.milestone:
+                milestone = json.loads(issue.milestone, object_hook=lambda d: SimpleNamespace(**d))
+                if milestone.id in self.milestones_dict:
+                    milestone_node = self.milestones_dict[milestone.id]
+                    self.sink.save_relationship(Relationship(milestone_node, "has", node))
+                    print(f"🔄 Criando relacionamento entre Milestone e Issue: {issue.title}-{milestone.id}")
+                            
+                
+           
+    def load(self):
+        self.fetch_data()
+        self.organization_node = Node("Organization", 
+                                 id =  self.client.get_organization(),
+                                 name= self.client.get_organization())
+        self.sink.save_node(self.organization_node, "Organization", "id")
+        
+        self.__load_repository()
+        self.__load_repository_project()
+        self.__load_milestones()
+        self.__load_issue()
+        
+        
     def run(self):
         print("🔄 Extraindo dados de Repositorios...")
+        self.load()
         print("✅ Extração concluída com sucesso!")
-        self.fetch_data()
-       
-        #self.load()
+        

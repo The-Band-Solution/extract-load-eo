@@ -1,7 +1,7 @@
 from extract.extract_base import ExtractBase
 from typing import  Any, List, Dict
 from py2neo import Node, Relationship
-from sink.sink_neo4j import SinkNeo4j
+
 from model.models import Project
 
 class ExtractEO (ExtractBase):
@@ -16,13 +16,11 @@ class ExtractEO (ExtractBase):
     
     team_memberships: Any = None
     users: Any = None
-    sink: Any = None
     
     def model_post_init(self, __context):
-        self.streams = ["projects_v2", 'teams', 'team_members']
+        self.streams = ["projects_v2", "teams", "team_members"]
         super().model_post_init(__context)
-            
-        self.sink = SinkNeo4j()        
+                  
         
     def fetch_data(self):
         self.load_data()
@@ -66,6 +64,11 @@ class ExtractEO (ExtractBase):
                                     short_description=project.short_description,
                                     url=project.url,
                                     id=project.id, 
+                                    readme=project.readme,
+                                    created_at=project.created_at,
+                                    closed_at=project.closed_at,
+                                    updated_at=project.updated_at,
+                                    owner_id=project.owner_id,
                                     number=project.number)
                 
                 self.projects_dict[project.id] = project_node
