@@ -137,7 +137,16 @@ class ExtractCIRO (ExtractBase):
                     if user_node is not None:
                         self.sink.save_relationship(Relationship(node, "assigneed_by", user_node))
                         print(f"🔄 Criando relacionamento entre Assignees e Issue: {user.login}-{issue.title}")  
-                                  
+            
+            if issue.labels:
+                labels =  json.loads(issue.labels)  
+                for label in labels:
+                    print (label)
+                    label_node = self.sink.get_node("Label", label['id'])
+                    if label_node is not None:
+                        self.sink.save_relationship(Relationship(node, "labeled", label_node))
+                        print(f"🔄 Criando relacionamento entre label e Issue:")      
+                                     
     def __load_labels(self):
         print(self.issue_labels.columns)
         for label in self.issue_labels.itertuples(index=False):
@@ -165,7 +174,7 @@ class ExtractCIRO (ExtractBase):
         self.__load_issue()
         
     def run(self):
-        print("🔄 Extraindo dados de Repositorios... xxx")
+        print("🔄 Extraindo dados de Repositorios... ")
         self.load()
         print("✅ Extração concluída com sucesso!")
         
