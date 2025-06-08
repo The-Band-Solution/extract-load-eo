@@ -23,8 +23,7 @@ class ExtractCIRO (ExtractBase):
     
     
     def model_post_init(self, __context):
-        #self.streams = [  ,  'pull_request_commits','issue_labels','repositories','projects_v2']
-        self.streams = ['repositories','projects_v2','issue_milestones','issues']
+        self.streams = ['repositories','projects_v2','issue_milestones','issues','pull_request_commits','issue_labels']
         super().model_post_init(__context)
         
     def fetch_data(self):
@@ -100,7 +99,6 @@ class ExtractCIRO (ExtractBase):
         
         for issue in self.issues.itertuples(index=False):
             data = self.trasnform(issue)
-            print (data)
             
             node = Node("Issue", **data)
             self.sink.save_node(node, "Issue", "id")
@@ -121,25 +119,38 @@ class ExtractCIRO (ExtractBase):
             if issue.user:
                 user = json.loads(issue.user, object_hook=lambda d: SimpleNamespace(**d))
                 user_node = self.sink.get_node("Person", user.login)
-                self.sink.save_relationship(Relationship(node, "created_by", user_node))
-                print(f"🔄 Criando relacionamento entre User e Issue: {user.login}-{issue.title}")                
+                if user_node is not None:
+                    print(f"🔄 Criando relacionamento entre User e Issue: {user.login}-{issue.title}")    
+                    self.sink.save_relationship(Relationship(node, "created_by", user_node))            
             
             if issue.assignee:
                 user = json.loads(issue.assignee, object_hook=lambda d: SimpleNamespace(**d))
                 user_node = self.sink.get_node("Person", user.login)
-                self.sink.save_relationship(Relationship(node, "assigneed_by", user_node))
-                print(f"🔄 Criando relacionamento entre Assignee e Issue: {user.login}-{issue.title}")  
+                if user_node is not None:
+                    self.sink.save_relationship(Relationship(node, "assigneed_by", user_node))
+                    print(f"🔄 Criando relacionamento entre Assignee e Issue: {user.login}-{issue.title}")  
             
             if issue.assignees:
-                print (issue.assignees)
-                for assignee in issue.assignees:
-                    user = json.loads(assignee, object_hook=lambda d: SimpleNamespace(**d))
-                    user_node = self.sink.get_node("Person", user.login)
-                    self.sink.save_relationship(Relationship(node, "assigneed_by", user_node))
-                    print(f"🔄 Criando relacionamento entre Assignees e Issue: {user.login}-{issue.title}")  
-                            
-                
-           
+                assignees = json.loads(issue.assignees)
+                for assignee in assignees:
+                    user_node = self.sink.get_node("Person", assignee["login"])
+                    if user_node is not None:
+                        self.sink.save_relationship(Relationship(node, "assigneed_by", user_node))
+                        print(f"🔄 Criando relacionamento entre Assignees e Issue: {user.login}-{issue.title}")  
+                                  
+    def __load_labels(self):
+        print(self.issue_labels.columns)
+        for label in self.issue_labels.itertuples(index=False):
+            data = self.trasnform(label)
+            node = Node("Label", **data)
+            self.sink.save_node(node, "Label", "id")
+            repository_node = self.sink.get_node("Repository", label.repository)
+            if repository_node is not None:
+                self.sink.save_relationship(Relationship(repository_node, "has", node))
+                print(f"🔄 Criando relacionamento entre Repository e Label:")  
+                                  
+            
+         
     def load(self):
         self.fetch_data()
         self.organization_node = Node("Organization", 
@@ -148,13 +159,13 @@ class ExtractCIRO (ExtractBase):
         self.sink.save_node(self.organization_node, "Organization", "id")
         
         self.__load_repository()
+        self.__load_labels()
         self.__load_repository_project()
         self.__load_milestones()
         self.__load_issue()
         
-        
     def run(self):
-        print("🔄 Extraindo dados de Repositorios...")
+        print("🔄 Extraindo dados de Repositorios... xxx")
         self.load()
         print("✅ Extração concluída com sucesso!")
         
