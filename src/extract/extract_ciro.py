@@ -13,8 +13,12 @@ class ExtractCIRO (ExtractBase):
     
     issues: Any = None
     pull_request_commits: Any = None
+    pull_requests: Any = None
+    
     issue_labels: Any = None
     organization_node: Any = None
+    
+    commits: Any = None
     
     repositories: Any = None
     repositories_dict: Dict[str, Any] = {}
@@ -23,7 +27,7 @@ class ExtractCIRO (ExtractBase):
     
     
     def model_post_init(self, __context):
-        self.streams = ['repositories','projects_v2','issue_milestones','issues','pull_request_commits','issue_labels']
+        self.streams = ['repositories','projects_v2','issue_milestones','issues','pull_request_commits','pull_requests', 'issue_labels', 'commits' ]
         super().model_post_init(__context)
         
     def fetch_data(self):
@@ -41,6 +45,10 @@ class ExtractCIRO (ExtractBase):
             self.pull_request_commits = self.cache["pull_request_commits"].to_pandas()
             print(f"✅ {len(self.pull_request_commits)} pull_request_commits carregadas.")
         
+        if "pull_requests" in self.cache: 
+            self.pull_requests = self.cache["pull_requests"].to_pandas()
+            print(f"✅ {len(self.pull_requests)} pull_requests carregadas.")
+        
         if "issue_labels" in self.cache:
             self.issue_labels = self.cache["issue_labels"].to_pandas()
             print(f"✅ {len(self.issue_labels)} issue_labels carregadas.")
@@ -52,6 +60,12 @@ class ExtractCIRO (ExtractBase):
         if "projects_v2" in self.cache:
             self.projects = self.cache["projects_v2"].to_pandas()
             print(f"✅ {len(self.projects)} projects carregadas.")
+        
+        if "commits" in self.cache:
+            self.commits = self.cache["commits"].to_pandas()
+            print(f"✅ {len(self.commits)} commits carregadas.")
+            
+            
        
      
     def __load_repository(self):
@@ -141,14 +155,12 @@ class ExtractCIRO (ExtractBase):
             if issue.labels:
                 labels =  json.loads(issue.labels)  
                 for label in labels:
-                    print (label)
                     label_node = self.sink.get_node("Label", label['id'])
                     if label_node is not None:
                         self.sink.save_relationship(Relationship(node, "labeled", label_node))
                         print(f"🔄 Criando relacionamento entre label e Issue:")      
                                      
     def __load_labels(self):
-        print(self.issue_labels.columns)
         for label in self.issue_labels.itertuples(index=False):
             data = self.trasnform(label)
             node = Node("Label", **data)
@@ -158,7 +170,62 @@ class ExtractCIRO (ExtractBase):
                 self.sink.save_relationship(Relationship(repository_node, "has", node))
                 print(f"🔄 Criando relacionamento entre Repository e Label:")  
                                   
+    def __load_commits(self):
+        for commit in self.commits.itertuples(index=False):
+            data = self.trasnform(commit)
+            data["id"] = data["sha"]+"-"+data["repository"]
+            node = Node("Commit", **data)
+            self.sink.save_node(node, "Commit", "id")
             
+            # Criando a relaçao entre repositorio e issue
+            repository_node = self.repositories_dict[commit.repository]
+            self.sink.save_relationship(Relationship(repository_node, "has", node))
+            print(f"🔄 Criando relacionamento entre Repositório e Issue: {commit.sha}-{commit.repository}")
+            
+            if commit.author:
+                user = json.loads(commit.author, object_hook=lambda d: SimpleNamespace(**d))
+                user_node = self.sink.get_node("Person", user.login)
+                if user_node is not None:
+                    self.sink.save_relationship(Relationship(node, "created_by", user_node))
+                    print(f"🔄 Criando relacionamento entre Author e Commit: {user.login}-{commit.sha}")  
+            
+            if commit.committer:
+                user = json.loads(commit.committer, object_hook=lambda d: SimpleNamespace(**d))
+                user_node = self.sink.get_node("committer", user.login)
+                if user_node is not None:
+                    self.sink.save_relationship(Relationship(node, "created_by", user_node))
+                    print(f"🔄 Criando relacionamento entre Author e Commit: {user.login}-{commit.sha}")
+    
+    
+    def __load_pull_request_commit(self):
+        for pull_request_commit in self.pull_request_commits.itertuples(index=False):
+            print(f"🔄  Commit, repository, pull_number: {pull_request_commit.sha}-{pull_request_commit.repository} - {pull_request_commit.pull_number}")
+                
+    def __load_pull_requests(self):
+        for pull_request in self.pull_requests.itertuples(index=False):
+            data = self.trasnform(pull_request)
+            node = Node("PullRequest", **data)
+            self.sink.save_node(node, "PullRequest", "id")
+            
+            # Criando a relaçao entre repositorio e issue
+            repository_node = self.repositories_dict[pull_request.repository]
+            self.sink.save_relationship(Relationship(repository_node, "has", node))
+            print(f"🔄 Criando relacionamento entre Repositório e Issue: {pull_request.id}-{pull_request.repository}")
+            
+            if pull_request.labels:
+                labels =  json.loads(pull_request.labels)
+                print (labels)
+            if pull_request.milestone: 
+               pass 
+            if pull_request.merge_commit_sha: 
+               pass 
+            if pull_request.assignee: 
+                pass
+            if pull_request.assignees: 
+                pass
+            
+            if pull_request.user: 
+                pass
          
     def load(self):
         self.fetch_data()
@@ -172,6 +239,17 @@ class ExtractCIRO (ExtractBase):
         self.__load_repository_project()
         self.__load_milestones()
         self.__load_issue()
+        self.__load_commits()
+        self.__load_pull_requests()
+        self.__load_pull_request_commit()
+        print ("pull_request_commits")
+        print (self.pull_request_commits.columns)
+        
+        print ("commits")
+        print (self.commits.columns)
+        
+        print ("pull_requests")
+        print (self.pull_requests.columns)
         
     def run(self):
         print("🔄 Extraindo dados de Repositorios... ")
