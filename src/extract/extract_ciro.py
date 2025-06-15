@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 class ExtractCIRO (ExtractBase):
    
-    
     milestones: Any = None
     milestones_dict: Dict[str, Any] = {}
     
@@ -18,16 +17,11 @@ class ExtractCIRO (ExtractBase):
     issue_labels: Any = None
     organization_node: Any = None
     
-    commits: Any = None
-    
-    repositories: Any = None
-    repositories_dict: Dict[str, Any] = {}
-    
     projects: Any = None
     
     
     def model_post_init(self, __context):
-        self.streams = ['issue_milestones','issues','pull_request_commits','pull_requests', 'issue_labels', 'commits' ]
+        self.streams = ['issue_milestones','issues','pull_request_commits','pull_requests', 'issue_labels' ]
         super().model_post_init(__context)
         
     def fetch_data(self):
@@ -59,7 +53,7 @@ class ExtractCIRO (ExtractBase):
             data = self.trasnform(milestone)
             milestone_node = Node("Milestone", **data)
             
-            repository_node = self.repositories_dict[milestone.repository]
+            repository_node = self.sink.get_node("Repository",full_name=milestone.repository)
             self.sink.save_node(milestone_node, "Milestone", "id")
             print(f"🔄 Criando Milestone: {milestone.title}")
             
@@ -77,8 +71,8 @@ class ExtractCIRO (ExtractBase):
             self.sink.save_node(node, "Issue", "id")
             print(f"🔄 Criando Issue: {issue.title}")
             
-            # Criando a relaçao entre repositorio e issue
-            repository_node = self.repositories_dict[issue.repository]
+            repository_node = self.sink.get_node("Repository",full_name=issue.repository)
+            
             self.sink.save_relationship(Relationship(repository_node, "has", node))
             print(f"🔄 Criando relacionamento entre Repositório e Issue: {issue.title}-{issue.repository}")
             
@@ -124,38 +118,13 @@ class ExtractCIRO (ExtractBase):
             data = self.trasnform(label)
             node = Node("Label", **data)
             self.sink.save_node(node, "Label", "id")
-            repository_node = self.sink.get_node("Repository", label.repository)
+            
+            repository_node = self.sink.get_node("Repository",full_name=label.repository)
+            
             if repository_node is not None:
                 self.sink.save_relationship(Relationship(repository_node, "has", node))
                 print(f"🔄 Criando relacionamento entre Repository e Label:")  
                                   
-    def __load_commits(self):
-        for commit in self.commits.itertuples(index=False):
-            data = self.trasnform(commit)
-            data["id"] = data["sha"]+"-"+data["repository"]
-            node = Node("Commit", **data)
-            self.sink.save_node(node, "Commit", "id")
-            
-            # Criando a relaçao entre repositorio e issue
-            repository_node = self.repositories_dict[commit.repository]
-            self.sink.save_relationship(Relationship(repository_node, "has", node))
-            print(f"🔄 Criando relacionamento entre Repositório e Issue: {commit.sha}-{commit.repository}")
-            
-            if commit.author:
-                user = json.loads(commit.author, object_hook=lambda d: SimpleNamespace(**d))
-                user_node = self.sink.get_node("Person", user.login)
-                if user_node is not None:
-                    self.sink.save_relationship(Relationship(node, "created_by", user_node))
-                    print(f"🔄 Criando relacionamento entre Author e Commit: {user.login}-{commit.sha}")  
-            
-            if commit.committer:
-                user = json.loads(commit.committer, object_hook=lambda d: SimpleNamespace(**d))
-                user_node = self.sink.get_node("committer", user.login)
-                if user_node is not None:
-                    self.sink.save_relationship(Relationship(node, "created_by", user_node))
-                    print(f"🔄 Criando relacionamento entre Author e Commit: {user.login}-{commit.sha}")
-    
-    
     def __load_pull_request_commit(self):
         for pull_request_commit in self.pull_request_commits.itertuples(index=False):
             print(f"🔄  Commit, repository, pull_number: {pull_request_commit.sha}-{pull_request_commit.repository} - {pull_request_commit.pull_number}")
@@ -167,7 +136,8 @@ class ExtractCIRO (ExtractBase):
             self.sink.save_node(node, "PullRequest", "id")
             
             # Criando a relaçao entre repositorio e issue
-            repository_node = self.repositories_dict[pull_request.repository]
+            repository_node = self.sink.get_node("Repository",full_name=pull_request.repository)
+            
             self.sink.save_relationship(Relationship(repository_node, "has", node))
             print(f"🔄 Criando relacionamento entre Repositório e Issue: {pull_request.id}-{pull_request.repository}")
             
@@ -196,20 +166,11 @@ class ExtractCIRO (ExtractBase):
         self.__load_labels()
         self.__load_milestones()
         self.__load_issue()
-        self.__load_commits()
         self.__load_pull_requests()
         self.__load_pull_request_commit()
-        print ("pull_request_commits")
-        print (self.pull_request_commits.columns)
-        
-        print ("commits")
-        print (self.commits.columns)
-        
-        print ("pull_requests")
-        print (self.pull_requests.columns)
         
     def run(self):
-        print("🔄 Extraindo dados de Repositorios... ")
+        print("🔄 Extraindo dados de CIRO ... ")
         self.load()
         print("✅ Extração concluída com sucesso!")
         
