@@ -55,38 +55,27 @@ class ExtractEO (ExtractBase):
         
         for project in self.projects.itertuples():
             
-            if project.id not in self.projects_dict:
-                
+                data = self.trasnform(project)
+               
                 print(f"🔄 Criando Projeto... {project.id} -{project.title} - {project.repository}")
                  
-                project_node = Node("Project", 
-                                    name=project.title, 
-                                    short_description=project.short_description,
-                                    url=project.url,
-                                    id=project.id, 
-                                    readme=project.readme,
-                                    created_at=project.created_at,
-                                    closed_at=project.closed_at,
-                                    updated_at=project.updated_at,
-                                    owner_id=project.owner_id,
-                                    number=project.number)
+                project_node = Node("Project", **data)
                 
-                self.projects_dict[project.id] = project_node
                     
-            self.sink.save_node(project_node, "Project", "id")
+                self.sink.save_node(project_node, "Project", "id")
             
-            # Create relationship between Organization and Project
-            self.sink.save_relationship(Relationship(organization_node, "has", project_node))
-            # relacionar os projetos os repositorios
-    
+                # Create relationship between Organization and Project
+                self.sink.save_relationship(Relationship(organization_node, "has", project_node))
+                # relacionar os projetos os repositorios
+        
     def __load_team_member(self, organization_node):
         
         for member in self.team_members.itertuples():
-            # Create Person node
-            person_node = Node("Person", 
-                                id=member.login,
-                                login=member.login)
+           
             
+            data = self.trasnform(member)
+            person_node = Node("Person", **data)
+            person_node["id"]=member.login
             self.sink.save_node(person_node, "Person", "id")
             
             if member.team_slug:
@@ -101,8 +90,13 @@ class ExtractEO (ExtractBase):
                 self.sink.save_relationship(Relationship(team_member_node, "done_for", team_node))
             
             # Relationships
+            team_node = self.get_node("Team", slug=member.team_slug)
             self.sink.save_relationship(Relationship(team_member_node, "is", person_node))
             self.sink.save_relationship(Relationship(person_node, "present_in", organization_node))
+            self.sink.save_relationship(Relationship(team_node, "has", team_member_node))
+            self.sink.save_relationship(Relationship(team_member_node, "allocated", team_node))
+            
+            ## Colocar o  team_member no team    
             
             
     def __load_team(self, organization_node):
@@ -110,11 +104,8 @@ class ExtractEO (ExtractBase):
         for team in self.teams.itertuples():  
               
             if team.id not in self.teams_dict:
-                
-                team_node = Node("Team", 
-                                id = team.id,
-                                slug=team.slug, 
-                                name=team.name)
+                data = self.trasnform(team)
+                team_node = Node("Team", **data)
                 
                 self.sink.save_node(team_node, "Team", "id")
                 print(f"🔄 Criando Equipe... {team.name}")

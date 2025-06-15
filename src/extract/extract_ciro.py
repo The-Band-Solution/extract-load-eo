@@ -80,7 +80,6 @@ class ExtractCIRO (ExtractBase):
             self.sink.save_relationship(Relationship(self.organization_node, "has", repository_node))
             print(f"🔄 Criando relacionamento entre Organização e Repositório: {repository.name}")
             
-            self.repositories_dict[repository.full_name] = repository_node
     
     def __load_repository_project(self):
            

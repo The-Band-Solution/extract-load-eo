@@ -10,12 +10,9 @@ class ExtractCMPO (ExtractBase):
     issues: Any = None
     
     organization_node: Any = None
-    
     commits: Any = None
     
     repositories: Any = None
-    repositories_dict: Dict[str, Any] = {}
-    
     projects: Any = None
     
     
@@ -55,20 +52,17 @@ class ExtractCMPO (ExtractBase):
             self.sink.save_relationship(Relationship(self.organization_node, "has", repository_node))
             print(f"🔄 Criando relacionamento entre Organização e Repositório: {repository.name}")
             
-            self.repositories_dict[repository.full_name] = repository_node
-    
+           
     def __load_repository_project(self):
            
         for project in self.projects.itertuples():
             
-            if project.repository in self.repositories_dict:
-                repository_node = self.repositories_dict[project.repository]
-                project_node = self.sink.get_node("Project",project.id)
-                
-                if repository_node and project_node:
-                    self.sink.save_relationship(Relationship(project_node, "has", repository_node))
-                    print(f"🔄 Criando relacionamento entre Repositorio e Projeto: {project.title}--{project.repository}")
-                
+            repository_node = self.sink.get_node("Repository",full_name=project.repository)
+            project_node = self.sink.get_node("Project",id=project.id)
+            if repository_node and project_node:    
+                self.sink.save_relationship(Relationship(project_node, "has", repository_node))
+                print(f"🔄 Criando relacionamento entre Repositorio e Projeto: {project.title}--{project.repository}")
+                    
             
                                      
     def __load_commits(self):
@@ -79,20 +73,20 @@ class ExtractCMPO (ExtractBase):
             self.sink.save_node(node, "Commit", "id")
             
             # Criando a relaçao entre repositorio e issue
-            repository_node = self.repositories_dict[commit.repository]
+            repository_node = self.sink.get_node("Repository",full_name=commit.repository) 
             self.sink.save_relationship(Relationship(repository_node, "has", node))
             print(f"🔄 Criando relacionamento entre Repositório e Issue: {commit.sha}-{commit.repository}")
             
             if commit.author:
                 user = json.loads(commit.author, object_hook=lambda d: SimpleNamespace(**d))
-                user_node = self.sink.get_node("Person", user.login)
+                user_node = self.sink.get_node("Person", id=user.login)
                 if user_node is not None:
                     self.sink.save_relationship(Relationship(node, "created_by", user_node))
                     print(f"🔄 Criando relacionamento entre Author e Commit: {user.login}-{commit.sha}")  
             
             if commit.committer:
                 user = json.loads(commit.committer, object_hook=lambda d: SimpleNamespace(**d))
-                user_node = self.sink.get_node("committer", user.login)
+                user_node = self.sink.get_node("committer", id=user.login)
                 if user_node is not None:
                     self.sink.save_relationship(Relationship(node, "created_by", user_node))
                     print(f"🔄 Criando relacionamento entre Author e Commit: {user.login}-{commit.sha}")
@@ -107,7 +101,7 @@ class ExtractCMPO (ExtractBase):
                 self.sink.save_node(node, "Branch", "id")
                 if branch.repository:
                    # Criando a relaçao entre repositorio e issue
-                    repository_node = self.repositories_dict[branch.repository]
+                    repository_node = self.sink.get_node("Repository",full_name=branch.repository)
                     self.sink.save_relationship(Relationship(repository_node, "has", node))
                     print(f"🔄 Criando relacionamento entre Repositório e Branch: {branch.repository}-{branch.name}")
                     
@@ -115,10 +109,7 @@ class ExtractCMPO (ExtractBase):
          
     def load(self):
         self.fetch_data()
-        self.organization_node = Node("Organization", 
-                                 id =  self.client.get_organization(),
-                                 name= self.client.get_organization())
-        self.sink.save_node(self.organization_node, "Organization", "id")
+        self.organization_node = self.sink.get_node("Organization",id=self.client.get_organization()) 
         
         self.__load_repository()
         self.__load_repository_project()
