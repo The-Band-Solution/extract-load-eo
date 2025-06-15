@@ -53,10 +53,6 @@ class ExtractCIRO (ExtractBase):
             self.issue_labels = self.cache["issue_labels"].to_pandas()
             print(f"✅ {len(self.issue_labels)} issue_labels carregadas.")
        
-            
-            
-       
-     
     def __load_milestones (self):
         
         for milestone in self.milestones.itertuples(index=False):
