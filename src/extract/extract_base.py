@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 import airbyte as ab
 from source.github_client import GitHubClient
 from sink.sink_neo4j import SinkNeo4j
+from py2neo import Node, Relationship
+
 class ExtractBase(BaseModel):   
     organization: str = ""
     token: str = ""
@@ -54,4 +56,12 @@ class ExtractBase(BaseModel):
             if not k.startswith("_airbyte")
         }
         return data
-            
+    
+    def save_node (self, node:Node, type:str, key:str):
+        return self.sink.save_node(node, type, key)
+    
+    def save_relationship(self, element:Relationship):
+        return self.sink.save_relationship(element)
+    
+    def get_node(self, type: str, **properties):
+        return self.sink.get_node(type, properties)

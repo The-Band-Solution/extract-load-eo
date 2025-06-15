@@ -27,7 +27,7 @@ class ExtractCIRO (ExtractBase):
     
     
     def model_post_init(self, __context):
-        self.streams = ['repositories','projects_v2','issue_milestones','issues','pull_request_commits','pull_requests', 'issue_labels', 'commits' ]
+        self.streams = ['issue_milestones','issues','pull_request_commits','pull_requests', 'issue_labels', 'commits' ]
         super().model_post_init(__context)
         
     def fetch_data(self):
@@ -53,46 +53,10 @@ class ExtractCIRO (ExtractBase):
             self.issue_labels = self.cache["issue_labels"].to_pandas()
             print(f"✅ {len(self.issue_labels)} issue_labels carregadas.")
        
-        if "repositories" in self.cache:
-            self.repositories = self.cache["repositories"].to_pandas()
-            print(f"✅ {len(self.repositories)} repositories carregadas.") 
-        
-        if "projects_v2" in self.cache:
-            self.projects = self.cache["projects_v2"].to_pandas()
-            print(f"✅ {len(self.projects)} projects carregadas.")
-        
-        if "commits" in self.cache:
-            self.commits = self.cache["commits"].to_pandas()
-            print(f"✅ {len(self.commits)} commits carregadas.")
             
             
        
      
-    def __load_repository(self):
-        
-        for repository in self.repositories.itertuples():
-            data = self.trasnform(repository)
-            repository_node = Node("Repository",**data)
-            
-            self.sink.save_node(repository_node, "Repository", "id")
-            print(f"✅ Repositório {repository.name} adicionado")
-            
-            self.sink.save_relationship(Relationship(self.organization_node, "has", repository_node))
-            print(f"🔄 Criando relacionamento entre Organização e Repositório: {repository.name}")
-            
-    
-    def __load_repository_project(self):
-           
-        for project in self.projects.itertuples():
-            
-            if project.repository in self.repositories_dict:
-                repository_node = self.repositories_dict[project.repository]
-                project_node = self.sink.get_node("Project",project.id)
-                
-                if repository_node and project_node:
-                    self.sink.save_relationship(Relationship(project_node, "has", repository_node))
-                    print(f"🔄 Criando relacionamento entre Repositorio e Projeto: {project.title}--{project.repository}")
-                
     def __load_milestones (self):
         
         for milestone in self.milestones.itertuples(index=False):
@@ -233,9 +197,7 @@ class ExtractCIRO (ExtractBase):
                                  name= self.client.get_organization())
         self.sink.save_node(self.organization_node, "Organization", "id")
         
-        self.__load_repository()
         self.__load_labels()
-        self.__load_repository_project()
         self.__load_milestones()
         self.__load_issue()
         self.__load_commits()
