@@ -10,6 +10,7 @@ from py2neo import Node, Relationship
 
 class ExtractBase(BaseModel):   
     organization: str = ""
+    organization_node: Any = None
     token: str = ""
     client: Any = None
     streams: list[str] = []
@@ -21,9 +22,7 @@ class ExtractBase(BaseModel):
         load_dotenv()
         
         self.sink = SinkNeo4j()  
-        self.organization = os.getenv("GITHUB_ORG", "")
         self.token = os.getenv("GITHUB_TOKEN", "")
-        self.client = GitHubClient(self.token, self.organization)
         
         if self.streams:
         
@@ -40,6 +39,7 @@ class ExtractBase(BaseModel):
 
             # Verify the config and creds by running `check`:
             self.source.check()
+            self.__load_organization()
             
             
     def load_data(self):
@@ -65,3 +65,16 @@ class ExtractBase(BaseModel):
     
     def get_node(self, type: str, **properties):
         return self.sink.get_node(type, properties)
+
+    def __load_organization(self):
+        self.organization_node = self.sink.get_node("Organization",id=self.client.get_organization())
+        
+        if self.organization_node is None:
+            print("🔄 Criando Organização...")
+    
+            self.organization_node = Node("Organization", 
+                                    id = self.client.get_organization(),
+                                    name=self.client.get_organization())
+            
+            self.sink.save_node(self.organization_node, "Organization", "id")
+            

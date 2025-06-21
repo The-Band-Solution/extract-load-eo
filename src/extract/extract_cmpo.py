@@ -107,17 +107,15 @@ class ExtractCMPO (ExtractBase):
                     
         
          
-    def load(self):
-        self.fetch_data()
-        self.organization_node = self.sink.get_node("Organization",id=self.client.get_organization()) 
         
+    def run(self):
+        print("🔄 Extraindo dadso usando CMPO ... ")
+        
+        self.fetch_data()  
         self.__load_repository()
         self.__load_repository_project()
         self.__load_branchs()
         self.__load_commits()
-        
-    def run(self):
-        print("🔄 Extraindo dadso usando CMPO ... ")
-        self.load()
+            
         print("✅ Extração concluída com sucesso!")
         

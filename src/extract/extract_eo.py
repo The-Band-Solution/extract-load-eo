@@ -34,17 +34,6 @@ class ExtractEO (ExtractBase):
             
         
         
-    def __load_organization(self):
-        
-        print("🔄 Criando Organização...")
-    
-        self.organization_node = Node("Organization", 
-                                 id = self.client.get_organization(),
-                                 name=self.client.get_organization())
-        
-        self.sink.save_node(self.organization_node, "Organization", "id")
-        
-        
     def __load_project(self):
         
         for project in self.projects.itertuples():

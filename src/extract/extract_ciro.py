@@ -155,22 +155,14 @@ class ExtractCIRO (ExtractBase):
             
             if pull_request.user: 
                 pass
-         
-    def load(self):
-        self.fetch_data()
-        self.organization_node = Node("Organization", 
-                                 id =  self.client.get_organization(),
-                                 name= self.client.get_organization())
-        self.sink.save_node(self.organization_node, "Organization", "id")
         
+    def run(self):
+        print("🔄 Extraindo dados de CIRO ... ")
+        self.fetch_data()
         self.__load_labels()
         self.__load_milestones()
         self.__load_issue()
         self.__load_pull_requests()
         self.__load_pull_request_commit()
-        
-    def run(self):
-        print("🔄 Extraindo dados de CIRO ... ")
-        self.load()
         print("✅ Extração concluída com sucesso!")
         
