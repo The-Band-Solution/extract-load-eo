@@ -1,5 +1,5 @@
 
-# 🔗 EO Extractor 
+# 🔗 EO Extractor
 
 This project connects to the GitHub API to extract **teams** and **members** from an organization and saves them to a **Neo4j** graph database modeled based on the **SEON/UFO-C ontology**.
 
@@ -17,7 +17,7 @@ This project connects to the GitHub API to extract **teams** and **members** fro
 
 ## 🧱 Ontological Structure (SEON/UFO-C)
 
-The Enterprise Ontology (EO) aims at establishing a common conceptualization on the Entreprise domain, including organizations, organizational units, people, roles, teams and projects. 
+The Enterprise Ontology (EO) aims at establishing a common conceptualization on the Entreprise domain, including organizations, organizational units, people, roles, teams and projects.
 
 ![texto alternativo](eo.png)
 
@@ -102,4 +102,3 @@ RETURN p, TeamMember, TeamMembership, OrganizationalRole, Team
 * Python 3.8+
 * Neo4j Desktop or Neo4j running in Docker
 * GitHub Personal Access Token with `read:org` scope
-

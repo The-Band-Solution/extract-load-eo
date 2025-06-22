@@ -1,6 +1,6 @@
 services:
   extractor:
-    build: .  
+    build: .
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
       - NEO4J_URI=${NEO4J_URI}

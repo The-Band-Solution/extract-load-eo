@@ -1,168 +1,236 @@
-from extract.extract_base import ExtractBase
-from typing import  Any, Dict
-from py2neo import Node, Relationship
-from sink.sink_neo4j import SinkNeo4j
-import json
-from types import SimpleNamespace
+from src.extract.extract_base import ExtractBase  # noqa: I001
+from typing import Any  # noqa: I001
+from py2neo import Node, Relationship  # noqa: I001
+import json  # noqa: I001
+from types import SimpleNamespace  # noqa: I001
 
-class ExtractCIRO (ExtractBase):
-   
+
+class ExtractCIRO(ExtractBase):
+    """Class responsible for extracting data fand save on  CIRO dataset.
+
+    It loads milestones, issues, pull requests, pull request commits,
+    and labels from the Airbyte source and persists them into a Neo4j graph database.
+    """
+
+    # Dataframes loaded from the cache
     milestones: Any = None
-    milestones_dict: Dict[str, Any] = {}
-    
+    milestones_dict: dict[str, Any] = {}
+
     issues: Any = None
     pull_request_commits: Any = None
     pull_requests: Any = None
-    
+
     issue_labels: Any = None
     organization_node: Any = None
-    
+
     projects: Any = None
-    
-    
-    def model_post_init(self, __context):
-        self.streams = ['issue_milestones','issues','pull_request_commits','pull_requests', 'issue_labels' ]
+
+    def model_post_init(self, __context: Any) -> None:
+        """Post-initialization hook.
+
+        Defines the list of streams to fetch and calls the parent
+        initialization to set up Airbyte and Neo4j connections.
+        """
+        self.streams = [
+            "issue_milestones",
+            "issues",
+            "pull_request_commits",
+            "pull_requests",
+            "issue_labels",
+        ]
         super().model_post_init(__context)
-        
-    def fetch_data(self):
+
+    def fetch_data(self) -> None:
+        """Loads the data from Airbyte cache into pandas DataFrames."""  # noqa: D401
         self.load_data()
-        
+
         if "issue_milestones" in self.cache:
             self.milestones = self.cache["issue_milestones"].to_pandas()
-            print(f"✅ {len(self.milestones)} issue_milestones carregadas.")
-        
+            print(f"✅ {len(self.milestones)} issue_milestones loaded.")
+
         if "issues" in self.cache:
             self.issues = self.cache["issues"].to_pandas()
-            print(f"✅ {len(self.issues)} issues carregadas.")
-       
+            print(f"✅ {len(self.issues)} issues loaded.")
+
         if "pull_request_commits" in self.cache:
             self.pull_request_commits = self.cache["pull_request_commits"].to_pandas()
-            print(f"✅ {len(self.pull_request_commits)} pull_request_commits carregadas.")
-        
-        if "pull_requests" in self.cache: 
+            print(f"✅ {len(self.pull_request_commits)} pull_request_commits loaded.")
+
+        if "pull_requests" in self.cache:
             self.pull_requests = self.cache["pull_requests"].to_pandas()
-            print(f"✅ {len(self.pull_requests)} pull_requests carregadas.")
-        
+            print(f"✅ {len(self.pull_requests)} pull_requests loaded.")
+
         if "issue_labels" in self.cache:
             self.issue_labels = self.cache["issue_labels"].to_pandas()
-            print(f"✅ {len(self.issue_labels)} issue_labels carregadas.")
-       
-    def __load_milestones (self):
-        
+            print(f"✅ {len(self.issue_labels)} issue_labels loaded.")
+
+    def __load_milestones(self) -> None:
+        """Loads milestones into the Neo4j graph as nodes and creates relationships
+        to their respective repositories.
+        """  # noqa: D205, D401
         for milestone in self.milestones.itertuples(index=False):
-            data = self.trasnform(milestone)
+            data = self.transform(milestone)
             milestone_node = Node("Milestone", **data)
-            
-            repository_node = self.sink.get_node("Repository",full_name=milestone.repository)
+
+            repository_node = self.sink.get_node(
+                "Repository", full_name=milestone.repository
+            )
             self.sink.save_node(milestone_node, "Milestone", "id")
-            print(f"🔄 Criando Milestone: {milestone.title}")
-            
+            print(f"🔄 Creating Milestone: {milestone.title}")
+
             self.milestones_dict[milestone.id] = milestone_node
-            
-            self.sink.save_relationship(Relationship(repository_node, "has", milestone_node))
-            print(f"🔄 Criando relacionamento entre Repositório e Milestone: {milestone.title}--{milestone.repository}")
-            
-    def __load_issue(self):
-        
+
+            self.sink.save_relationship(
+                Relationship(repository_node, "has", milestone_node)
+            )
+
+    def __load_issue(self) -> None:
+        """Loads issues into the Neo4j graph and creates all relevant
+        nodes and relationships.
+        """  # noqa: D205, D401
         for issue in self.issues.itertuples(index=False):
-            data = self.trasnform(issue)
-            
-            node = Node("Issue", **data)
-            self.sink.save_node(node, "Issue", "id")
-            print(f"🔄 Criando Issue: {issue.title}")
-            
-            repository_node = self.sink.get_node("Repository",full_name=issue.repository)
-            
+            data = self.transform(issue)
+
+            node = self._create_issue_node(data, issue)
+            self._link_issue_to_repository(node, issue)
+            self._link_issue_to_milestone(node, issue)
+            self._link_issue_to_users(node, issue)
+            self._link_issue_to_labels(node, issue)
+
+    def _create_issue_node(self, data: dict[str, Any], issue: Any) -> Node:
+        node = Node("Issue", **data)
+        self.sink.save_node(node, "Issue", "id")
+        print(f"🔄 Creating Issue: {issue.title}")
+        return node
+
+    def _link_issue_to_repository(self, node: Node, issue: Any) -> None:
+        repository_node = self.sink.get_node("Repository", full_name=issue.repository)
+        if repository_node:
             self.sink.save_relationship(Relationship(repository_node, "has", node))
-            print(f"🔄 Criando relacionamento entre Repositório e Issue: {issue.title}-{issue.repository}")
-            
-            if issue.milestone:
-                milestone = json.loads(issue.milestone, object_hook=lambda d: SimpleNamespace(**d))
-                if milestone.id in self.milestones_dict:
-                    milestone_node = self.milestones_dict[milestone.id]
-                    self.sink.save_relationship(Relationship(milestone_node, "has", node))
-                    print(f"🔄 Criando relacionamento entre Milestone e Issue: {issue.title}-{milestone.id}")
-            
-            if issue.user:
-                user = json.loads(issue.user, object_hook=lambda d: SimpleNamespace(**d))
-                user_node = self.sink.get_node("Person", user.login)
-                if user_node is not None:
-                    print(f"🔄 Criando relacionamento entre User e Issue: {user.login}-{issue.title}")    
-                    self.sink.save_relationship(Relationship(node, "created_by", user_node))            
-            
-            if issue.assignee:
-                user = json.loads(issue.assignee, object_hook=lambda d: SimpleNamespace(**d))
-                user_node = self.sink.get_node("Person", user.login)
-                if user_node is not None:
-                    self.sink.save_relationship(Relationship(node, "assigneed_by", user_node))
-                    print(f"🔄 Criando relacionamento entre Assignee e Issue: {user.login}-{issue.title}")  
-            
-            if issue.assignees:
-                assignees = json.loads(issue.assignees)
-                for assignee in assignees:
-                    user_node = self.sink.get_node("Person", assignee["login"])
-                    if user_node is not None:
-                        self.sink.save_relationship(Relationship(node, "assigneed_by", user_node))
-                        print(f"🔄 Criando relacionamento entre Assignees e Issue: {user.login}-{issue.title}")  
-            
-            if issue.labels:
-                labels =  json.loads(issue.labels)  
-                for label in labels:
-                    label_node = self.sink.get_node("Label", label['id'])
-                    if label_node is not None:
-                        self.sink.save_relationship(Relationship(node, "labeled", label_node))
-                        print(f"🔄 Criando relacionamento entre label e Issue:")      
-                                     
-    def __load_labels(self):
+            print(f"🔄 Linking Repository to Issue: {issue.title}-{issue.repository}")
+
+    def _link_issue_to_milestone(self, node: Node, issue: Any) -> None:
+        if issue.milestone:
+            milestone = json.loads(
+                issue.milestone, object_hook=lambda d: SimpleNamespace(**d)
+            )
+            milestone_node = self.milestones_dict.get(milestone.id)
+            if milestone_node:
+                self.sink.save_relationship(Relationship(milestone_node, "has", node))
+                print(f"🔄 Linking Milestone to Issue: {issue.title}-{milestone.id}")
+
+    def _link_issue_to_users(self, node: Node, issue: Any) -> None:
+        # Creator
+        if issue.user:
+            self._create_user_relationship(node, issue.user, "created_by", issue.title)
+
+        # Single assignee
+        if issue.assignee:
+            self._create_user_relationship(
+                node, issue.assignee, "assigned_to", issue.title
+            )
+
+        # Multiple assignees
+        if issue.assignees:
+            assignees = json.loads(issue.assignees)
+            for assignee in assignees:
+                self._create_user_relationship(
+                    node, assignee, "assigned_to", issue.title
+                )
+
+    def _create_user_relationship(
+        self, node: Node, user_data: Any, rel_type: str, issue_title: str
+    ) -> None:
+        user = (
+            user_data
+            if isinstance(user_data, dict)
+            else json.loads(user_data, object_hook=lambda d: SimpleNamespace(**d))
+        )
+        login = user.login if hasattr(user, "login") else user["login"]
+        user_node = self.sink.get_node("Person", login)
+
+        if user_node:
+            self.sink.save_relationship(Relationship(node, rel_type, user_node))
+            print(
+                f"🔄 Linking {rel_type} between Issue and User: {login}-{issue_title}"
+            )
+
+    def _link_issue_to_labels(self, node: Node, issue: Any) -> None:
+        if issue.labels:
+            labels = json.loads(issue.labels)
+            for label in labels:
+                label_node = self.sink.get_node("Label", label["id"])
+                if label_node:
+                    self.sink.save_relationship(
+                        Relationship(node, "labeled", label_node)
+                    )
+
+    def __load_labels(self) -> None:
+        """Loads labels and creates relationships with repositories."""  # noqa: D401
+        # noqa: D401
+
         for label in self.issue_labels.itertuples(index=False):
-            data = self.trasnform(label)
+            data = self.transform(label)
             node = Node("Label", **data)
             self.sink.save_node(node, "Label", "id")
-            
-            repository_node = self.sink.get_node("Repository",full_name=label.repository)
-            
+
+            repository_node = self.sink.get_node(
+                "Repository", full_name=label.repository
+            )
+
             if repository_node is not None:
                 self.sink.save_relationship(Relationship(repository_node, "has", node))
-                print(f"🔄 Criando relacionamento entre Repository e Label:")  
-                                  
-    def __load_pull_request_commit(self):
+
+    def __load_pull_request_commit(self) -> None:
+        """Loads pull request commit data.
+
+        Currently this method only prints commit information. Can be extended
+        to create nodes and relationships for commits in the graph.
+        """  # noqa: D401
         for pull_request_commit in self.pull_request_commits.itertuples(index=False):
-            print(f"🔄  Commit, repository, pull_number: {pull_request_commit.sha}-{pull_request_commit.repository} - {pull_request_commit.pull_number}")
-                
-    def __load_pull_requests(self):
+            print(pull_request_commit)
+
+    def __load_pull_requests(self) -> None:
+        """Loads pull requests into the Neo4j graph, creates pull request nodes,
+        and builds relationships with repositories and (in the future) labels,
+        merge commits, users, and assignees.
+        """  # noqa: D205, D401
         for pull_request in self.pull_requests.itertuples(index=False):
-            data = self.trasnform(pull_request)
+            data = self.transform(pull_request)
             node = Node("PullRequest", **data)
             self.sink.save_node(node, "PullRequest", "id")
-            
-            # Criando a relaçao entre repositorio e issue
-            repository_node = self.sink.get_node("Repository",full_name=pull_request.repository)
-            
+
+            repository_node = self.sink.get_node(
+                "Repository", full_name=pull_request.repository
+            )
+
             self.sink.save_relationship(Relationship(repository_node, "has", node))
-            print(f"🔄 Criando relacionamento entre Repositório e Issue: {pull_request.id}-{pull_request.repository}")
-            
+
             if pull_request.labels:
-                labels =  json.loads(pull_request.labels)
-                print (labels)
-            if pull_request.milestone: 
-               pass 
-            if pull_request.merge_commit_sha: 
-               pass 
-            if pull_request.assignee: 
+                labels = json.loads(pull_request.labels)
+                print(labels)
+            if pull_request.milestone:
                 pass
-            if pull_request.assignees: 
+            if pull_request.merge_commit_sha:
                 pass
-            
-            if pull_request.user: 
+            if pull_request.assignee:
                 pass
-        
-    def run(self):
-        print("🔄 Extraindo dados de CIRO ... ")
+            if pull_request.assignees:
+                pass
+            if pull_request.user:
+                pass
+
+    def run(self) -> None:
+        """Orchestrates the entire extraction process.
+
+        Loads data, processes labels, milestones, issues, pull requests, and commits,
+        and saves them into the Neo4j graph.
+        """
+        print("🔄 Extracting CIRO data ...")
         self.fetch_data()
         self.__load_labels()
         self.__load_milestones()
         self.__load_issue()
         self.__load_pull_requests()
         self.__load_pull_request_commit()
-        print("✅ Extração concluída com sucesso!")
-        
+        print("✅ Extraction completed successfully!")

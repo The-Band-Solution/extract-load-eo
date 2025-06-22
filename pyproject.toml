@@ -1,0 +1,57 @@
+[tool.black]
+line-length = 88
+target-version = ["py311"]  # Altere para sua versão: py38, py39, py310, py311, etc.
+skip-string-normalization = false
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+# Ativa regras de múltiplos linters (substitui flake8, isort, etc.)
+select = [
+  "E",    # pycodestyle (erros)
+  "F",    # pyflakes (erros)
+  "I",    # isort (imports)
+  "UP",   # pyupgrade (atualização de sintaxe Python)
+  "C90",  # mccabe (complexidade ciclomática)
+  "N",    # pep8-naming (nomes de variáveis e funções)
+  "D",    # pydocstyle (docstrings)
+  "B",    # flake8-bugbear (bugs comuns)
+  "S",    # bandit (segurança)
+]
+ignore = [
+  "D100", # Ignora docstring em módulos
+  "D104"  # Ignora docstring em pacotes
+]
+# Corrige automaticamente problemas simples
+fixable = ["ALL"]
+
+[tool.ruff.isort]
+combine-as-imports = true
+force-single-line = false
+
+[tool.ruff.mccabe]
+max-complexity = 10  # Complexidade máxima permitida
+
+[tool.mypy]
+python_version = 3.11
+strict = true
+ignore_missing_imports = true
+show_error_codes = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-docstring",
+    "invalid-name"
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
