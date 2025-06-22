@@ -1,6 +1,5 @@
 import os  # noqa: I001
 from typing import Any  # noqa: I001
-
 import airbyte as ab  # noqa: I001
 import pandas as pd  # noqa: I001
 from dotenv import load_dotenv  # noqa: I001
