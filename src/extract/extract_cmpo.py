@@ -2,7 +2,7 @@ import json  # noqa: I001
 from types import SimpleNamespace  # noqa: I001
 from typing import Any  # noqa: I001
 from py2neo import Node, Relationship  # noqa: I001
-from src.extract.extract_base import ExtractBase  # noqa: I001
+from extract.extract_base import ExtractBase  # noqa: I001
 
 
 class ExtractCMPO(ExtractBase):
@@ -16,7 +16,6 @@ class ExtractCMPO(ExtractBase):
     # DataFrames extracted from Airbyte
     branches: Any = None
     issues: Any = None
-    organization_node: Any = None
     commits: Any = None
     repositories: Any = None
     projects: Any = None

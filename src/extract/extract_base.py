@@ -4,11 +4,11 @@ import airbyte as ab  # noqa: I001
 import pandas as pd  # noqa: I001
 from dotenv import load_dotenv  # noqa: I001
 from py2neo import Node, Relationship  # noqa: I001
-
+from pydantic import BaseModel # noqa: I001
 from sink.sink_neo4j import SinkNeo4j  # noqa: I001
 
 
-class ExtractBase:
+class ExtractBase(BaseModel):
     """Base class for data extraction using Airbyte as the source
     and Neo4j as the destination.
 
@@ -142,7 +142,7 @@ class ExtractBase:
         """  # noqa: D401
         # Attempt to retrieve the organization node
         self.organization_node = self.sink.get_node(
-            "Organization", id=self.client.get_organization()
+            "Organization", id=os.getenv("ORGANIZATION_ID", "")
         )
 
         # If the node does not exist, create it
@@ -151,8 +151,8 @@ class ExtractBase:
 
             self.organization_node = Node(
                 "Organization",
-                id=self.client.get_organization(),
-                name=self.client.get_organization(),
+                id=os.getenv("ORGANIZATION_ID", ""),
+                name=os.getenv("ORGANIZATION", ""),
             )
 
             self.sink.save_node(self.organization_node, "Organization", "id")

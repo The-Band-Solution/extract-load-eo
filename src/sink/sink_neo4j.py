@@ -2,9 +2,9 @@ import os  # noqa: I001
 from typing import Any  # noqa: I001
 from dotenv import load_dotenv  # noqa: I001
 from py2neo import Graph, Node, Relationship  # noqa: I001
+from pydantic import BaseModel # noqa: I001
 
-
-class SinkNeo4j:
+class SinkNeo4j(BaseModel):
     """Handles connections and interactions with the Neo4j graph database.
 
     This class provides methods to persist nodes and relationships,

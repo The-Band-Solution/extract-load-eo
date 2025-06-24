@@ -1,4 +1,4 @@
-from src.extract.extract_base import ExtractBase  # noqa: I001
+from extract.extract_base import ExtractBase  # noqa: I001
 from typing import Any  # noqa: I001
 from py2neo import Node, Relationship  # noqa: I001
 import json  # noqa: I001
@@ -21,7 +21,6 @@ class ExtractCIRO(ExtractBase):
     pull_requests: Any = None
 
     issue_labels: Any = None
-    organization_node: Any = None
 
     projects: Any = None
 

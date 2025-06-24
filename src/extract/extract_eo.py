@@ -2,7 +2,7 @@ from typing import Any  # noqa: I001
 
 from py2neo import Node, Relationship  # noqa: I001
 
-from src.extract.extract_base import ExtractBase  # noqa: I001
+from extract.extract_base import ExtractBase  # noqa: I001
 
 
 class ExtractEO(ExtractBase):
@@ -123,7 +123,6 @@ class ExtractEO(ExtractBase):
         """
         print("🔄 Extracting data for Teams and Members...")
         self.fetch_data()
-        self.__load_organization()
         self.__load_project()
         self.__load_team()
         self.__load_team_member()
