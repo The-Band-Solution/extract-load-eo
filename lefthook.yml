@@ -1,0 +1,27 @@
+pre-commit:
+  parallel: true
+  commands:
+    ruff:
+      run: ruff check .
+    ruff-format:
+      run: ruff format --check .
+    black:
+      run: black --check .
+    mypy:
+      run: mypy .
+    check-yaml:
+      run: find . -name '*.yml' -o -name '*.yaml' | xargs yamllint
+    check-json:
+      run: find . -name '*.json' | xargs -I{} python -m json.tool {} > /dev/null
+    end-of-file-fixer:
+      run: find . -type f \( -name '*.py' -o -name '*.md' -o -name '*.txt' \) | xargs sed -i -e '$a\'
+    trailing-whitespace:
+      run: find . -type f \( -name '*.py' -o -name '*.md' -o -name '*.txt' \) | xargs sed -i 's/[ \t]*$//'
+    check-added-large-files:
+      run: |
+        git diff --cached --name-only | while read file; do
+          if [ -f "$file" ] && [ $(stat -c%s "$file") -gt 524288 ]; then
+            echo "❌ Arquivo grande detectado: $file"
+            exit 1
+          fi
+        done
