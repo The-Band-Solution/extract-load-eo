@@ -2,7 +2,7 @@ from typing import Any  # noqa: I001
 
 from py2neo import Node, Relationship  # noqa: I001
 
-from extract.extract_base import ExtractBase  # noqa: I001
+from src.extract.extract_base import ExtractBase  # noqa: I001
 
 
 class ExtractEO(ExtractBase):
@@ -22,7 +22,7 @@ class ExtractEO(ExtractBase):
     users: Any = None
     organization_node: Any = None
 
-    def model_post_init(self, __context: Any) -> None:
+    def __init__(self) -> None:
         """Post-initialization hook.
 
         Defines the streams (`projects_v2`, `teams`, `team_members`) to fetch
@@ -30,7 +30,7 @@ class ExtractEO(ExtractBase):
         connections.
         """
         self.streams = ["projects_v2", "teams", "team_members"]
-        super().model_post_init(__context)
+        super().__init__()
 
     def fetch_data(self) -> None:
         """Loads data from the Airbyte cache into pandas DataFrames."""  # noqa: D401

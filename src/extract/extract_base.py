@@ -4,11 +4,13 @@ import airbyte as ab  # noqa: I001
 import pandas as pd  # noqa: I001
 from dotenv import load_dotenv  # noqa: I001
 from py2neo import Node, Relationship  # noqa: I001
-from pydantic import BaseModel # noqa: I001
 from sink.sink_neo4j import SinkNeo4j  # noqa: I001
+import json  # noqa: I001
+from abc import ABC, abstractmethod  # noqa: I001
+from types import SimpleNamespace  # noqa: I001
 
 
-class ExtractBase(BaseModel):
+class ExtractBase(ABC):
     """Base class for data extraction using Airbyte as the source
     and Neo4j as the destination.
 
@@ -27,7 +29,7 @@ class ExtractBase(BaseModel):
     source: Any = None  # Airbyte source connector
     sink: Any = None  # Data sink, in this case Neo4j (via SinkNeo4j)
 
-    def model_post_init(self, __context: Any) -> None:
+    def __init__(self) -> None:
         """Post-initialization hook.
 
         Loads environment variables, initializes the Neo4j sink,
@@ -133,6 +135,25 @@ class ExtractBase(BaseModel):
 
         """  # noqa: D401
         return self.sink.get_node(type, properties)
+
+    @abstractmethod
+    def fetch_data(self) -> None:
+        """Retrieve data from a data repository."""
+        pass
+
+    def transform_object(self, value: Any) -> Any:
+        """Trasnform dictionary to object.
+
+        Args:
+        ----
+            value (Any): dictionary
+
+        Returns:
+        -------
+            Object: Object
+
+        """  # noqa: D401
+        return json.loads(value, object_hook=lambda d: SimpleNamespace(**d))
 
     def __load_organization(self) -> None:
         """Loads the organization node from Neo4j.

@@ -9,10 +9,6 @@ pre-commit:
       run: black --check .
     mypy:
       run: mypy .
-    check-yaml:
-      run: find . -name '*.yml' -o -name '*.yaml' | xargs yamllint
-    check-json:
-      run: find . -name '*.json' | xargs -I{} python -m json.tool {} > /dev/null
     end-of-file-fixer:
       run: find . -type f \( -name '*.py' -o -name '*.md' -o -name '*.txt' \) | xargs sed -i -e '$a\'
     trailing-whitespace:

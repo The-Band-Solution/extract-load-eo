@@ -1,8 +1,6 @@
-import json  # noqa: I001
-from types import SimpleNamespace  # noqa: I001
 from typing import Any  # noqa: I001
 from py2neo import Node, Relationship  # noqa: I001
-from extract.extract_base import ExtractBase  # noqa: I001
+from src.extract.extract_base import ExtractBase  # noqa: I001
 
 
 class ExtractCMPO(ExtractBase):
@@ -20,14 +18,14 @@ class ExtractCMPO(ExtractBase):
     repositories: Any = None
     projects: Any = None
 
-    def model_post_init(self, __context: Any) -> None:
+    def __init__(self) -> None:
         """Post-initialization hook.
 
         Defines the data streams to fetch and calls the parent initialization method
         to set up Airbyte sources and Neo4j connections.
         """
         self.streams = ["repositories", "projects_v2", "commits", "branches"]
-        super().model_post_init(__context)
+        super().__init__()
 
     def fetch_data(self) -> None:
         """Loads the data streams from Airbyte into pandas DataFrames."""  # noqa: D401
@@ -69,7 +67,9 @@ class ExtractCMPO(ExtractBase):
             repository_node = self.sink.get_node(
                 "Repository", full_name=project.repository
             )
+
             project_node = self.sink.get_node("Project", id=project.id)
+
             if repository_node and project_node:
                 self.sink.save_relationship(
                     Relationship(project_node, "has", repository_node)
@@ -93,9 +93,8 @@ class ExtractCMPO(ExtractBase):
 
             # Author relationship
             if commit.author:
-                user = json.loads(
-                    commit.author, object_hook=lambda d: SimpleNamespace(**d)
-                )
+                user = self.transform_object(commit.author)
+
                 user_node = self.sink.get_node("Person", id=user.login)
                 if user_node:
                     self.sink.save_relationship(
@@ -104,9 +103,8 @@ class ExtractCMPO(ExtractBase):
 
             # Committer relationship
             if commit.committer:
-                user = json.loads(
-                    commit.committer, object_hook=lambda d: SimpleNamespace(**d)
-                )
+                user = self.transform_object(commit.committer)
+
                 user_node = self.sink.get_node("Person", id=user.login)
                 if user_node:
                     self.sink.save_relationship(
@@ -120,6 +118,7 @@ class ExtractCMPO(ExtractBase):
         """  # noqa: D205, D401
         for branch in self.branches.itertuples(index=False):
             data = self.transform(branch)
+
             data["id"] = data["name"] + "-" + data["repository"]
 
             node = Node("Branch", **data)

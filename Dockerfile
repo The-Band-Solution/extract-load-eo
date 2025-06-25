@@ -1,14 +1,18 @@
 FROM python:3.10
 
-# Diretório de trabalho
+# Define o diretório de trabalho
 WORKDIR /app
 
-# Copia tudo, incluindo src/ e requirements.txt
+# Copia o código-fonte e dependências
 COPY ./src /app/src
-COPY requirements.txt .
+COPY requirements.txt /app/
 
 # Instala as dependências
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Roda o main.py dentro da pasta /app/src
-CMD ["python", "src/main.py"]
+# Define PYTHONPATH para que 'src.' funcione nos imports
+ENV PYTHONPATH=/app/src
+
+# Comando de execução
+CMD ["python", "-m", "src.main"]
+

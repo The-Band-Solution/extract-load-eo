@@ -1,8 +1,7 @@
-from extract.extract_base import ExtractBase  # noqa: I001
+from src.extract.extract_base import ExtractBase  # noqa: I001
 from typing import Any  # noqa: I001
 from py2neo import Node, Relationship  # noqa: I001
 import json  # noqa: I001
-from types import SimpleNamespace  # noqa: I001
 
 
 class ExtractCIRO(ExtractBase):
@@ -14,17 +13,13 @@ class ExtractCIRO(ExtractBase):
 
     # Dataframes loaded from the cache
     milestones: Any = None
-    milestones_dict: dict[str, Any] = {}
-
     issues: Any = None
     pull_request_commits: Any = None
     pull_requests: Any = None
-
     issue_labels: Any = None
-
     projects: Any = None
 
-    def model_post_init(self, __context: Any) -> None:
+    def __init__(self) -> None:
         """Post-initialization hook.
 
         Defines the list of streams to fetch and calls the parent
@@ -37,7 +32,7 @@ class ExtractCIRO(ExtractBase):
             "pull_requests",
             "issue_labels",
         ]
-        super().model_post_init(__context)
+        super().__init__()
 
     def fetch_data(self) -> None:
         """Loads the data from Airbyte cache into pandas DataFrames."""  # noqa: D401
@@ -69,15 +64,13 @@ class ExtractCIRO(ExtractBase):
         """  # noqa: D205, D401
         for milestone in self.milestones.itertuples(index=False):
             data = self.transform(milestone)
+
             milestone_node = Node("Milestone", **data)
 
             repository_node = self.sink.get_node(
                 "Repository", full_name=milestone.repository
             )
             self.sink.save_node(milestone_node, "Milestone", "id")
-            print(f"🔄 Creating Milestone: {milestone.title}")
-
-            self.milestones_dict[milestone.id] = milestone_node
 
             self.sink.save_relationship(
                 Relationship(repository_node, "has", milestone_node)
@@ -92,14 +85,15 @@ class ExtractCIRO(ExtractBase):
 
             node = self._create_issue_node(data, issue)
             self._link_issue_to_repository(node, issue)
-            self._link_issue_to_milestone(node, issue)
-            self._link_issue_to_users(node, issue)
-            self._link_issue_to_labels(node, issue)
+            # self._link_issue_to_milestone(node, issue)
+            # self._link_issue_to_users(node, issue)
+            # self._link_issue_to_labels(node, issue)
 
     def _create_issue_node(self, data: dict[str, Any], issue: Any) -> Node:
         node = Node("Issue", **data)
         self.sink.save_node(node, "Issue", "id")
         print(f"🔄 Creating Issue: {issue.title}")
+
         return node
 
     def _link_issue_to_repository(self, node: Node, issue: Any) -> None:
@@ -110,10 +104,11 @@ class ExtractCIRO(ExtractBase):
 
     def _link_issue_to_milestone(self, node: Node, issue: Any) -> None:
         if issue.milestone:
-            milestone = json.loads(
-                issue.milestone, object_hook=lambda d: SimpleNamespace(**d)
-            )
-            milestone_node = self.milestones_dict.get(milestone.id)
+            milestone = self.transform_object(issue.milestone)
+
+            ## Errado precisa buscar no base
+            milestone_node = self.sink.get_node("Milestone", id=milestone.id)
+
             if milestone_node:
                 self.sink.save_relationship(Relationship(milestone_node, "has", node))
                 print(f"🔄 Linking Milestone to Issue: {issue.title}-{milestone.id}")
@@ -143,7 +138,7 @@ class ExtractCIRO(ExtractBase):
         user = (
             user_data
             if isinstance(user_data, dict)
-            else json.loads(user_data, object_hook=lambda d: SimpleNamespace(**d))
+            else self.transform_object(user_data)
         )
         login = user.login if hasattr(user, "login") else user["login"]
         user_node = self.sink.get_node("Person", login)
