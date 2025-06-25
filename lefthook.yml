@@ -4,9 +4,9 @@ pre-commit:
     ruff:
       run: ruff check .
     ruff-format:
-      run: ruff format --check .
+      run: ruff format .
     black:
-      run: black --check .
+      run: black .
     mypy:
       run: mypy .
     end-of-file-fixer:

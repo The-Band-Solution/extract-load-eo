@@ -1,13 +1,13 @@
 [tool.black]
 line-length = 88
-target-version = ["py311"]  # Altere para sua versão: py38, py39, py310, py311, etc.
+target-version = ["py311"]
 skip-string-normalization = false
 
 [tool.ruff]
 line-length = 88
 target-version = "py311"
 
-# Ativa regras de múltiplos linters (substitui flake8, isort, etc.)
+[tool.ruff.lint]
 select = [
   "E",    # pycodestyle (erros)
   "F",    # pyflakes (erros)
@@ -20,18 +20,19 @@ select = [
   "S",    # bandit (segurança)
 ]
 ignore = [
-  "D100", # Ignora docstring em módulos
-  "D104"  # Ignora docstring em pacotes
+  "D100",  # Ignora docstring em módulos
+  "D104",   # Ignora docstring em pacotes
+  "D203",  # removido pois conflita com D211
+  "D213"   # removido pois conflita com D212
 ]
-# Corrige automaticamente problemas simples
 fixable = ["ALL"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 combine-as-imports = true
 force-single-line = false
 
-[tool.ruff.mccabe]
-max-complexity = 10  # Complexidade máxima permitida
+[tool.ruff.lint.mccabe]
+max-complexity = 10
 
 [tool.mypy]
 python_version = 3.11
