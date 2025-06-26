@@ -155,6 +155,32 @@ class ExtractBase(ABC):
         """  # noqa: D401
         return json.loads(value, object_hook=lambda d: SimpleNamespace(**d))
 
+    def create_relationship(
+        self, node_from: Node, relation: str, node_to: Node
+    ) -> None:
+        """Create a Relationship between nodes.
+
+        Args:
+        ----
+            node_from (Node): node source relationship
+            relation (str): relation name
+            node_to (Node): node target from relationship
+
+        """  # noqa: D401
+        self.sink.save_relationship(Relationship(node_from, relation, node_to))
+
+    def create_node(self, node: Node, node_type: str, id_field: str) -> None:
+        """Create a Node.
+
+        Args:
+        ----
+            node (Node): a node on graph
+            node_type (str): type of node
+            id_field (str): define field that will be node's id
+
+        """  # noqa: D401
+        self.sink.save_node(node, node_type, id_field)
+
     def __load_organization(self) -> None:
         """Loads the organization node from Neo4j.
 

@@ -85,9 +85,9 @@ class ExtractCIRO(ExtractBase):
 
             node = self._create_issue_node(data, issue)
             self._link_issue_to_repository(node, issue)
-            # self._link_issue_to_milestone(node, issue)
-            # self._link_issue_to_users(node, issue)
-            # self._link_issue_to_labels(node, issue)
+            self._link_issue_to_milestone(node, issue)
+            self._link_issue_to_users(node, issue)
+            self._link_issue_to_labels(node, issue)
 
     def _create_issue_node(self, data: dict[str, Any], issue: Any) -> Node:
         node = Node("Issue", **data)
@@ -141,7 +141,8 @@ class ExtractCIRO(ExtractBase):
             else self.transform_object(user_data)
         )
         login = user.login if hasattr(user, "login") else user["login"]
-        user_node = self.sink.get_node("Person", login)
+
+        user_node = self.sink.get_node("Person", id=login)
 
         if user_node:
             self.sink.save_relationship(Relationship(node, rel_type, user_node))
@@ -153,7 +154,7 @@ class ExtractCIRO(ExtractBase):
         if issue.labels:
             labels = json.loads(issue.labels)
             for label in labels:
-                label_node = self.sink.get_node("Label", label["id"])
+                label_node = self.sink.get_node("Label", id=label["id"])
                 if label_node:
                     self.sink.save_relationship(
                         Relationship(node, "labeled", label_node)
