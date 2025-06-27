@@ -1,6 +1,7 @@
 from src.extract.extract_eo import ExtractEO  # noqa: I001
-from src.extract.extract_ciro import ExtractCIRO  # noqa: I001
-from src.extract.extract_cmpo import ExtractCMPO  # noqa: I001
+
+# from src.extract.extract_ciro import ExtractCIRO  # noqa: I001
+# from src.extract.extract_cmpo import ExtractCMPO  # noqa: I001
 
 
 def main() -> None:
@@ -21,10 +22,10 @@ def main() -> None:
     ExtractEO().run()
 
     # Run the CMPO extractor (Repositories, Commits, Branches, Projects)
-    ExtractCMPO().run()
+    # ExtractCMPO().run()
 
     # Run the CIRO extractor (Issues, Milestones, Pull Requests, Labels)
-    ExtractCIRO().run()
+    # ExtractCIRO().run()
 
 
 if __name__ == "__main__":

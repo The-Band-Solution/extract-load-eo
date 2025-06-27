@@ -169,17 +169,23 @@ class ExtractBase(ABC):
         """  # noqa: D401
         self.sink.save_relationship(Relationship(node_from, relation, node_to))
 
-    def create_node(self, node: Node, node_type: str, id_field: str) -> None:
+    def create_node(self, data: Any, node_type: str, id_field: str) -> Node:
         """Create a Node.
 
         Args:
         ----
-            node (Node): a node on graph
+            data (Any): data to be save in a node
             node_type (str): type of node
             id_field (str): define field that will be node's id
 
+        Returns:
+        -------
+            Node: a node in a graph
+
         """  # noqa: D401
+        node = Node(node_type, **data)
         self.sink.save_node(node, node_type, id_field)
+        return node
 
     def __load_organization(self) -> None:
         """Loads the organization node from Neo4j.

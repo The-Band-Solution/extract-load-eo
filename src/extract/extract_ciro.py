@@ -70,7 +70,7 @@ class ExtractCIRO(ExtractBase):
             repository_node = self.sink.get_node(
                 "Repository", full_name=milestone.repository
             )
-            self.sink.save_node(milestone_node, "Milestone", "id")
+            self.create_node(milestone_node, "Milestone", "id")
 
             self.sink.save_relationship(
                 Relationship(repository_node, "has", milestone_node)
@@ -91,7 +91,7 @@ class ExtractCIRO(ExtractBase):
 
     def _create_issue_node(self, data: dict[str, Any], issue: Any) -> Node:
         node = Node("Issue", **data)
-        self.sink.save_node(node, "Issue", "id")
+        self.create_node(node, "Issue", "id")
         print(f"🔄 Creating Issue: {issue.title}")
 
         return node
@@ -167,7 +167,7 @@ class ExtractCIRO(ExtractBase):
         for label in self.issue_labels.itertuples(index=False):
             data = self.transform(label)
             node = Node("Label", **data)
-            self.sink.save_node(node, "Label", "id")
+            self.create_node(node, "Label", "id")
 
             repository_node = self.sink.get_node(
                 "Repository", full_name=label.repository
@@ -193,7 +193,7 @@ class ExtractCIRO(ExtractBase):
         for pull_request in self.pull_requests.itertuples(index=False):
             data = self.transform(pull_request)
             node = Node("PullRequest", **data)
-            self.sink.save_node(node, "PullRequest", "id")
+            self.create_node(node, "PullRequest", "id")
 
             repository_node = self.sink.get_node(
                 "Repository", full_name=pull_request.repository

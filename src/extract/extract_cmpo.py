@@ -55,7 +55,7 @@ class ExtractCMPO(ExtractBase):
             data = self.transform(repository)
             repository_node = Node("Repository", **data)
 
-            self.sink.save_node(repository_node, "Repository", "id")
+            self.create_node(repository_node, "Repository", "id")
 
             self.sink.save_relationship(
                 Relationship(self.organization_node, "has", repository_node)
@@ -84,7 +84,7 @@ class ExtractCMPO(ExtractBase):
             data["id"] = data["sha"] + "-" + data["repository"]
 
             node = Node("Commit", **data)
-            self.sink.save_node(node, "Commit", "id")
+            self.create_node(node, "Commit", "id")
 
             repository_node = self.sink.get_node(
                 "Repository", full_name=commit.repository
@@ -122,7 +122,7 @@ class ExtractCMPO(ExtractBase):
             data["id"] = data["name"] + "-" + data["repository"]
 
             node = Node("Branch", **data)
-            self.sink.save_node(node, "Branch", "id")
+            self.create_node(node, "Branch", "id")
 
             if branch.repository:
                 repository_node = self.sink.get_node(

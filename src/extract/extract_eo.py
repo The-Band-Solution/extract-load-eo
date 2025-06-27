@@ -1,7 +1,4 @@
 from typing import Any  # noqa: I001
-
-from py2neo import Node, Relationship  # noqa: I001
-
 from src.extract.extract_base import ExtractBase  # noqa: I001
 
 
@@ -53,13 +50,10 @@ class ExtractEO(ExtractBase):
         for project in self.projects.itertuples():
             data = self.transform(project)
 
-            project_node = Node("Project", **data)
-            self.sink.save_node(project_node, "Project", "id")
+            project_node = self.create_node(data, "Project", "id")
 
             # Relationship: Organization has Project
-            self.sink.save_relationship(
-                Relationship(self.organization_node, "has", project_node)
-            )
+            self.create_relationship(self.organization_node, "has", project_node)
 
             # Optional: You can create relationships between Project and
             # Repository here.
@@ -72,48 +66,36 @@ class ExtractEO(ExtractBase):
             data = self.transform(member)
             data["id"] = member.login
 
-            person_node = Node("Person", **data)
-            self.sink.save_node(person_node, "Person", "id")
+            person_node = self.create_node(data, "Person", "id")
 
             # Relationship: Person present in Organization
-            self.sink.save_relationship(
-                Relationship(person_node, "present_in", self.organization_node)
-            )
+            self.create_relationship(person_node, "present_in", self.organization_node)
 
             if member.team_slug:
                 # Create TeamMember node (membership instance)
-                team_member_node = Node(
-                    "TeamMember", id=f"{member.login}-{member.team_slug}"
-                )
-                self.sink.save_node(team_member_node, "TeamMember", "id")
+                data["id"] = f"{member.login}-{member.team_slug}"
+
+                team_member_node = self.create_node(data, "TeamMember", "id")
 
                 # Get Team node
                 team_node = self.sink.get_node("Team", slug=member.team_slug)
 
                 # Relationships
-                self.sink.save_relationship(
-                    Relationship(team_member_node, "done_for", team_node)
-                )
-                self.sink.save_relationship(
-                    Relationship(team_node, "has", team_member_node)
-                )
-                self.sink.save_relationship(
-                    Relationship(team_member_node, "is", person_node)
-                )
+                self.create_relationship(team_member_node, "done_for", team_node)
+
+                self.create_relationship(team_node, "has", team_member_node)
+
+                self.create_relationship(team_member_node, "is", person_node)
 
     def __load_team(self) -> None:
         """Creates Team nodes and links them to the organization."""  # noqa: D401
         for team in self.teams.itertuples():
             data = self.transform(team)
-            team_node = Node("Team", **data)
-
-            self.sink.save_node(team_node, "Team", "id")
+            team_node = self.create_node(data, "Team", "id")
             print(f"🔄 Creating Team... {team.name}")
 
             # Relationship: Organization has Team
-            self.sink.save_relationship(
-                Relationship(self.organization_node, "has", team_node)
-            )
+            self.create_relationship(self.organization_node, "has", team_node)
 
     def run(self) -> None:
         """Orchestrates the full extraction and loading process.
