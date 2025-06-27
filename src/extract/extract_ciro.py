@@ -1,6 +1,6 @@
 from src.extract.extract_base import ExtractBase  # noqa: I001
 from typing import Any  # noqa: I001
-from py2neo import Node, Relationship  # noqa: I001
+from py2neo import Node  # noqa: I001
 import json  # noqa: I001
 
 
@@ -65,16 +65,13 @@ class ExtractCIRO(ExtractBase):
         for milestone in self.milestones.itertuples(index=False):
             data = self.transform(milestone)
 
-            milestone_node = Node("Milestone", **data)
+            milestone_node = self.create_node(data, "Milestone", "id")
 
-            repository_node = self.sink.get_node(
+            repository_node = self.get_node(
                 "Repository", full_name=milestone.repository
             )
-            self.create_node(milestone_node, "Milestone", "id")
 
-            self.sink.save_relationship(
-                Relationship(repository_node, "has", milestone_node)
-            )
+            self.create_relationship(repository_node, "has", milestone_node)
 
     def __load_issue(self) -> None:
         """Loads issues into the Neo4j graph and creates all relevant
@@ -90,16 +87,15 @@ class ExtractCIRO(ExtractBase):
             self._link_issue_to_labels(node, issue)
 
     def _create_issue_node(self, data: dict[str, Any], issue: Any) -> Node:
-        node = Node("Issue", **data)
-        self.create_node(node, "Issue", "id")
+        node = self.create_node(data, "Issue", "id")
         print(f"🔄 Creating Issue: {issue.title}")
 
         return node
 
     def _link_issue_to_repository(self, node: Node, issue: Any) -> None:
-        repository_node = self.sink.get_node("Repository", full_name=issue.repository)
+        repository_node = self.get_node("Repository", full_name=issue.repository)
         if repository_node:
-            self.sink.save_relationship(Relationship(repository_node, "has", node))
+            self.create_relationship(repository_node, "has", node)
             print(f"🔄 Linking Repository to Issue: {issue.title}-{issue.repository}")
 
     def _link_issue_to_milestone(self, node: Node, issue: Any) -> None:
@@ -107,10 +103,10 @@ class ExtractCIRO(ExtractBase):
             milestone = self.transform_object(issue.milestone)
 
             ## Errado precisa buscar no base
-            milestone_node = self.sink.get_node("Milestone", id=milestone.id)
+            milestone_node = self.get_node("Milestone", id=milestone.id)
 
             if milestone_node:
-                self.sink.save_relationship(Relationship(milestone_node, "has", node))
+                self.create_relationship(milestone_node, "has", node)
                 print(f"🔄 Linking Milestone to Issue: {issue.title}-{milestone.id}")
 
     def _link_issue_to_users(self, node: Node, issue: Any) -> None:
@@ -142,10 +138,10 @@ class ExtractCIRO(ExtractBase):
         )
         login = user.login if hasattr(user, "login") else user["login"]
 
-        user_node = self.sink.get_node("Person", id=login)
+        user_node = self.get_node("Person", id=login)
 
         if user_node:
-            self.sink.save_relationship(Relationship(node, rel_type, user_node))
+            self.create_relationship(node, rel_type, user_node)
             print(
                 f"🔄 Linking {rel_type} between Issue and User: {login}-{issue_title}"
             )
@@ -154,11 +150,9 @@ class ExtractCIRO(ExtractBase):
         if issue.labels:
             labels = json.loads(issue.labels)
             for label in labels:
-                label_node = self.sink.get_node("Label", id=label["id"])
+                label_node = self.get_node("Label", id=label["id"])
                 if label_node:
-                    self.sink.save_relationship(
-                        Relationship(node, "labeled", label_node)
-                    )
+                    self.create_relationship(node, "labeled", label_node)
 
     def __load_labels(self) -> None:
         """Loads labels and creates relationships with repositories."""  # noqa: D401
@@ -166,15 +160,14 @@ class ExtractCIRO(ExtractBase):
 
         for label in self.issue_labels.itertuples(index=False):
             data = self.transform(label)
-            node = Node("Label", **data)
-            self.create_node(node, "Label", "id")
+            node = self.create_node(data, "Label", "id")
 
-            repository_node = self.sink.get_node(
+            repository_node = self.get_node(
                 "Repository", full_name=label.repository
             )
 
             if repository_node is not None:
-                self.sink.save_relationship(Relationship(repository_node, "has", node))
+                self.create_relationship(repository_node, "has", node)
 
     def __load_pull_request_commit(self) -> None:
         """Loads pull request commit data.
@@ -192,14 +185,13 @@ class ExtractCIRO(ExtractBase):
         """  # noqa: D205, D401
         for pull_request in self.pull_requests.itertuples(index=False):
             data = self.transform(pull_request)
-            node = Node("PullRequest", **data)
-            self.create_node(node, "PullRequest", "id")
+            node = self.create_node(data, "PullRequest", "id")
 
-            repository_node = self.sink.get_node(
+            repository_node = self.get_node(
                 "Repository", full_name=pull_request.repository
             )
 
-            self.sink.save_relationship(Relationship(repository_node, "has", node))
+            self.create_relationship(repository_node, "has", node)
 
             if pull_request.labels:
                 labels = json.loads(pull_request.labels)

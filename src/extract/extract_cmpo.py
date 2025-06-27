@@ -1,5 +1,4 @@
 from typing import Any  # noqa: I001
-from py2neo import Node, Relationship  # noqa: I001
 from src.extract.extract_base import ExtractBase  # noqa: I001
 
 
@@ -53,27 +52,21 @@ class ExtractCMPO(ExtractBase):
         """  # noqa: D205, D401
         for repository in self.repositories.itertuples():
             data = self.transform(repository)
-            repository_node = Node("Repository", **data)
+            repository_node = self.create_node(data, "Repository", "id")
 
-            self.create_node(repository_node, "Repository", "id")
-
-            self.sink.save_relationship(
-                Relationship(self.organization_node, "has", repository_node)
-            )
+            self.create_relationship(self.organization_node, "has", repository_node)
 
     def __load_repository_project(self) -> None:
         """Creates relationships between repositories and  projects."""  # noqa: D401
         for project in self.projects.itertuples():
-            repository_node = self.sink.get_node(
+            repository_node = self.get_node(
                 "Repository", full_name=project.repository
             )
 
-            project_node = self.sink.get_node("Project", id=project.id)
+            project_node = self.get_node("Project", id=project.id)
 
             if repository_node and project_node:
-                self.sink.save_relationship(
-                    Relationship(project_node, "has", repository_node)
-                )
+                self.create_relationship(project_node, "has", repository_node)
 
     def __load_commits(self) -> None:
         """Loads commits into Neo4j as nodes and creates relationships
@@ -83,33 +76,28 @@ class ExtractCMPO(ExtractBase):
             data = self.transform(commit)
             data["id"] = data["sha"] + "-" + data["repository"]
 
-            node = Node("Commit", **data)
-            self.create_node(node, "Commit", "id")
+            node = self.create_node(data, "Commit", "id")
 
-            repository_node = self.sink.get_node(
+            repository_node = self.get_node(
                 "Repository", full_name=commit.repository
             )
-            self.sink.save_relationship(Relationship(repository_node, "has", node))
+            self.create_relationship(repository_node, "has", node)
 
             # Author relationship
             if commit.author:
                 user = self.transform_object(commit.author)
 
-                user_node = self.sink.get_node("Person", id=user.login)
+                user_node = self.get_node("Person", id=user.login)
                 if user_node:
-                    self.sink.save_relationship(
-                        Relationship(node, "created_by", user_node)
-                    )
+                    self.create_relationship(node, "created_by", user_node)
 
             # Committer relationship
             if commit.committer:
                 user = self.transform_object(commit.committer)
 
-                user_node = self.sink.get_node("Person", id=user.login)
+                user_node = self.get_node("Person", id=user.login)
                 if user_node:
-                    self.sink.save_relationship(
-                        Relationship(node, "created_by", user_node)
-                    )
+                    self.create_relationship(node, "created_by", user_node)
 
     def __load_branchs(self) -> None:
         """Loads branches into Neo4j as nodes and
@@ -121,14 +109,13 @@ class ExtractCMPO(ExtractBase):
 
             data["id"] = data["name"] + "-" + data["repository"]
 
-            node = Node("Branch", **data)
-            self.create_node(node, "Branch", "id")
+            node = self.create_node(data, "Branch", "id")
 
             if branch.repository:
-                repository_node = self.sink.get_node(
+                repository_node = self.get_node(
                     "Repository", full_name=branch.repository
                 )
-                self.sink.save_relationship(Relationship(repository_node, "has", node))
+                self.create_relationship(repository_node, "has", node)
 
     def run(self) -> None:
         """Orchestrates the full data extraction process for CMPO.
