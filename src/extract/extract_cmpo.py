@@ -59,9 +59,7 @@ class ExtractCMPO(ExtractBase):
     def __load_repository_project(self) -> None:
         """Creates relationships between repositories and  projects."""  # noqa: D401
         for project in self.projects.itertuples():
-            repository_node = self.get_node(
-                "Repository", full_name=project.repository
-            )
+            repository_node = self.get_node("Repository", full_name=project.repository)
 
             project_node = self.get_node("Project", id=project.id)
 
@@ -78,9 +76,7 @@ class ExtractCMPO(ExtractBase):
 
             node = self.create_node(data, "Commit", "id")
 
-            repository_node = self.get_node(
-                "Repository", full_name=commit.repository
-            )
+            repository_node = self.get_node("Repository", full_name=commit.repository)
             self.create_relationship(repository_node, "has", node)
 
             # Author relationship

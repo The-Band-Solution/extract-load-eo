@@ -162,9 +162,7 @@ class ExtractCIRO(ExtractBase):
             data = self.transform(label)
             node = self.create_node(data, "Label", "id")
 
-            repository_node = self.get_node(
-                "Repository", full_name=label.repository
-            )
+            repository_node = self.get_node("Repository", full_name=label.repository)
 
             if repository_node is not None:
                 self.create_relationship(repository_node, "has", node)
