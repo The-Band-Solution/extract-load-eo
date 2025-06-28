@@ -49,7 +49,6 @@ class ExtractEO(ExtractBase):
         """Creates project nodes and relationships to the organization in Neo4j."""  # noqa: D401
         for project in self.projects.itertuples():
             data = self.transform(project)
-
             project_node = self.create_node(data, "Project", "id")
 
             # Relationship: Organization has Project
@@ -82,9 +81,7 @@ class ExtractEO(ExtractBase):
 
                 # Relationships
                 self.create_relationship(team_member_node, "done_for", team_node)
-
                 self.create_relationship(team_node, "has", team_member_node)
-
                 self.create_relationship(team_member_node, "is", person_node)
 
     def __load_team(self) -> None:

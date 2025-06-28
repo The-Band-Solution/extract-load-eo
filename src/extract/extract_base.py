@@ -121,12 +121,12 @@ class ExtractBase(ABC):
         """  # noqa: D401
         return self.sink.save_relationship(element)
 
-    def get_node(self, type: str, **properties: Any) -> Node:
+    def get_node(self, type_element: str, **properties: Any) -> Node:
         """Retrieves a node from Neo4j based on type and properties.
 
         Args:
         ----
-            type (str): Node label (e.g., "User", "Repository").
+            type_element (str): Node label (e.g., "User", "Repository").
             **properties (Any): Property filters (e.g., id="123").
 
         Returns:
@@ -134,7 +134,7 @@ class ExtractBase(ABC):
             Node: The matched node, or None if not found.
 
         """  # noqa: D401
-        return self.sink.get_node(type, properties)
+        return self.sink.get_node(type_element, **properties)
 
     @abstractmethod
     def fetch_data(self) -> None:

@@ -1,5 +1,6 @@
 from typing import Any  # noqa: I001
 from src.extract.extract_base import ExtractBase  # noqa: I001
+import json
 
 
 class ExtractCMPO(ExtractBase):
@@ -66,6 +67,27 @@ class ExtractCMPO(ExtractBase):
             if repository_node and project_node:
                 self.create_relationship(project_node, "has", repository_node)
 
+    def flatten_dict(self, d: Any, prefix: Any) -> Any:
+        """Transforma um dict aninhado em um dict plano com prefixos.
+
+        Args:
+        ----
+            d (Any): data
+            prefix (Any):  prefix.
+
+        Returns:
+        -------
+            dict: a dictionary.
+
+        """  # noqa: D401
+        flat = {}
+        for k, v in d.items():
+            if isinstance(v, dict):
+                flat.update(self.flatten_dict(v, prefix + k + "_"))
+            else:
+                flat[prefix + k] = v
+        return flat
+
     def __load_commits(self) -> None:
         """Loads commits into Neo4j as nodes and creates relationships
         to repositories and authors (committers).
@@ -74,7 +96,10 @@ class ExtractCMPO(ExtractBase):
             data = self.transform(commit)
             data["id"] = data["sha"] + "-" + data["repository"]
 
-            node = self.create_node(data, "Commit", "id")
+            commit_data = json.loads(commit.commit)
+
+            node_data = {**data, **self.flatten_dict(commit_data, "")}
+            node = self.create_node(node_data, "Commit", "id")
 
             repository_node = self.get_node("Repository", full_name=commit.repository)
             self.create_relationship(repository_node, "has", node)
@@ -94,6 +119,26 @@ class ExtractCMPO(ExtractBase):
                 user_node = self.get_node("Person", id=user.login)
                 if user_node:
                     self.create_relationship(node, "created_by", user_node)
+
+            branch_node = self.get_node(
+                "Branch", id=commit.branch + "-" + commit.repository
+            )
+            self.create_relationship(branch_node, "has", node)
+            self.create_relationship(node, "in", branch_node)
+
+    def __create_relation_commits(self) -> None:
+        """Create relationships between commits."""
+        for commit in self.commits.itertuples(index=False):
+            parents = json.loads(commit.parents)
+            for parent in parents:
+                commit_node = self.get_node(
+                    "Commit", id=commit.sha + "-" + commit.repository
+                )
+                parent_node = self.get_node(
+                    "Commit", id=parent["sha"] + "-" + commit.repository
+                )
+                self.create_relationship(parent_node, "is_parent", commit_node)
+                self.create_relationship(commit_node, "has_parent", parent_node)
 
     def __load_branchs(self) -> None:
         """Loads branches into Neo4j as nodes and
@@ -126,5 +171,6 @@ class ExtractCMPO(ExtractBase):
         self.__load_repository_project()
         self.__load_branchs()
         self.__load_commits()
+        self.__create_relation_commits()
 
         print("✅ Extraction completed successfully!")
