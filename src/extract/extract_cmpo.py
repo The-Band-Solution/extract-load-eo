@@ -1,7 +1,7 @@
 from typing import Any  # noqa: I001
 from src.extract.extract_base import ExtractBase  # noqa: I001
-from src.github.github_client import GitHubClient
-import json
+from github import Github  # noqa: I001
+import json  # noqa: I001
 import os  # noqa: I001
 
 
@@ -161,14 +161,35 @@ class ExtractCMPO(ExtractBase):
                 self.create_relationship(repository_node, "has", node)
 
     def __load_files_commits(self) -> None:
-        commits_to_process = [
-            {"repo": commit.repository, "sha": commit.sha}
-            for commit in self.commits.itertuples(index=False)
-        ]
+        """Load files from a commit."""
+        token = os.getenv("GITHUB_TOKEN", "")
+        g = Github(token)
 
-        fetcher = GitHubClient(token=os.getenv("GITHUB_TOKEN", ""))
-        fetcher.run(commits_to_process)
-        fetcher.print_results()
+        for commit in self.commits.itertuples(index=False):
+            repo = g.get_repo(commit.repository)
+            commit_git = repo.get_commit(commit.sha)
+
+            commit_node = self.get_node(
+                "Commit", id=commit.sha + "-" + commit.repository
+            )
+            for file in commit_git.files:
+                if file.sha:
+                    data = {
+                        "id": file.sha,
+                        "filename": file.filename,
+                        "status": file.status,
+                        "additions": file.additions,
+                        "deletions": file.deletions,
+                        "changes": file.changes,
+                        "patch": file.patch,
+                        "raw_url": file.raw_url,
+                        "blob_url": file.blob_url,
+                        "sha": file.sha,
+                    }
+
+                    file_node = self.create_node(data, "SoftwareArtifact", "id")
+                    self.create_relationship(commit_node, "has", file_node)
+                    self.create_relationship(file_node, "commited", commit_node)
 
     def run(self) -> None:
         """Orchestrates the full data extraction process for CMPO.
