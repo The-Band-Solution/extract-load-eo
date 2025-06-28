@@ -85,6 +85,7 @@ class ExtractCIRO(ExtractBase):
             self._link_issue_to_milestone(node, issue)
             self._link_issue_to_users(node, issue)
             self._link_issue_to_labels(node, issue)
+            # Ligar com o pull request
 
     def _create_issue_node(self, data: dict[str, Any], issue: Any) -> Node:
         node = self.create_node(data, "Issue", "id")
@@ -173,8 +174,9 @@ class ExtractCIRO(ExtractBase):
         Currently this method only prints commit information. Can be extended
         to create nodes and relationships for commits in the graph.
         """  # noqa: D401
-        for pull_request_commit in self.pull_request_commits.itertuples(index=False):
-            print(pull_request_commit)
+        print(self.pull_request_commits.columns)
+        # for pull_request_commit in self.pull_request_commits.itertuples(index=False):
+        #    print(pull_request_commit)
 
     def __load_pull_requests(self) -> None:
         """Loads pull requests into the Neo4j graph, creates pull request nodes,

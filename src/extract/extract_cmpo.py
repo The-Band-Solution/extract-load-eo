@@ -1,6 +1,8 @@
 from typing import Any  # noqa: I001
 from src.extract.extract_base import ExtractBase  # noqa: I001
+from src.github.github_client import GitHubClient
 import json
+import os  # noqa: I001
 
 
 class ExtractCMPO(ExtractBase):
@@ -158,6 +160,16 @@ class ExtractCMPO(ExtractBase):
                 )
                 self.create_relationship(repository_node, "has", node)
 
+    def __load_files_commits(self) -> None:
+        commits_to_process = [
+            {"repo": commit.repository, "sha": commit.sha}
+            for commit in self.commits.itertuples(index=False)
+        ]
+
+        fetcher = GitHubClient(token=os.getenv("GITHUB_TOKEN", ""))
+        fetcher.run(commits_to_process)
+        fetcher.print_results()
+
     def run(self) -> None:
         """Orchestrates the full data extraction process for CMPO.
 
@@ -172,5 +184,6 @@ class ExtractCMPO(ExtractBase):
         self.__load_branchs()
         self.__load_commits()
         self.__create_relation_commits()
+        self.__load_files_commits()
 
         print("✅ Extraction completed successfully!")
