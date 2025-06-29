@@ -1,9 +1,7 @@
 from src.extract.extract_eo import ExtractEO  # noqa: I001
 from src.extract.extract_ciro import ExtractCIRO  # noqa: I001
 from src.extract.extract_cmpo import ExtractCMPO  # noqa: I001
-from src.extract.extract_cmpo_software_artifact import (
-    ExtractCMPOSoftwareArtifact,
-)  # noqa: I001
+from src.extract.extract_cmpo_software_artifact import ExtractCMPOSoftwareArtifact # noqa: I001
 
 
 def main() -> None:
