@@ -2,17 +2,27 @@ pre-commit:
   parallel: true
   commands:
     ruff:
-      run: ruff check .
+      run: ruff check . --fix  # Corrige automaticamente erros fixáveis
+
     ruff-format:
-      run: ruff format .
+      run: ruff format .  # Aplica formatação com base nas regras do Ruff
+
     black:
-      run: black .
+      run: black .  # Formata o código com Black (caso esteja usando junto com Ruff)
+
     mypy:
-      run: mypy .
+      run: mypy .  # Verifica tipagens estáticas
+
     end-of-file-fixer:
-      run: find . -type f \( -name '*.py' -o -name '*.md' -o -name '*.txt' \) | xargs sed -i -e '$a\'
+      run: |
+        find . -type f \( -name '*.py' -o -name '*.md' -o -name '*.txt' \) \
+        | xargs sed -i -e '$a\'  # Garante que arquivos terminam com newline
+
     trailing-whitespace:
-      run: find . -type f \( -name '*.py' -o -name '*.md' -o -name '*.txt' \) | xargs sed -i 's/[ \t]*$//'
+      run: |
+        find . -type f \( -name '*.py' -o -name '*.md' -o -name '*.txt' \) \
+        | xargs sed -i 's/[ \t]*$//'  # Remove espaços em branco no final das linhas
+
     check-added-large-files:
       run: |
         git diff --cached --name-only | while read file; do
@@ -20,4 +30,4 @@ pre-commit:
             echo "❌ Arquivo grande detectado: $file"
             exit 1
           fi
-        done
+        done  # Impede commit de arquivos maiores que 512 KB
