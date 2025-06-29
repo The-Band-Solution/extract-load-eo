@@ -158,7 +158,8 @@ class ExtractCMPO(ExtractBase):
                 repository_node = self.get_node(
                     "Repository", full_name=branch.repository
                 )
-                self.create_relationship(repository_node, "has", node)
+                if repository_node is not None:
+                    self.create_relationship(repository_node, "has", node)
 
     def run(self) -> None:
         """Orchestrates the full data extraction process for CMPO.

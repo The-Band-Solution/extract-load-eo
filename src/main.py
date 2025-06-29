@@ -4,7 +4,7 @@ from src.extract.extract_cmpo import ExtractCMPO  # noqa: I001
 from src.extract.extract_cmpo_software_artifact import (
     ExtractCMPOSoftwareArtifact,
 )  # noqa: I001
-from src.report.team_report import TeamReport
+from src.extract.create_config import CreateConfig
 
 
 def main() -> None:
@@ -31,20 +31,8 @@ def main() -> None:
     ExtractCIRO().run()
 
     ExtractCMPOSoftwareArtifact().run()
-
-    extractor = TeamReport()
-
-    markdown = extractor.create_people_markdown()
-    output_path = "/data/people.md"
-    extractor.save_markdown_to_file(markdown, output_path)
-
-    print(f"Markdown saved to: {output_path}")
-
-    markdown = extractor.create_team_markdown()
-    output_path = "/data/team.md"
-    extractor.save_markdown_to_file(markdown, output_path)
-
-    print(f"Markdown saved to: {output_path}")
+    # TODO: Criar um config por dominio
+    CreateConfig().run()
 
 
 if __name__ == "__main__":

@@ -21,6 +21,7 @@ class ExtractBase(ABC):
     """  # noqa: D205
 
     # Class attributes
+    config_node: Any = None  # Config node
     organization_node: Any = None  # Neo4j Node object representing the organization
     token: str = ""  # API token (e.g., GitHub token)
     client: Any = None  # API client (to be defined in subclasses)
@@ -46,15 +47,31 @@ class ExtractBase(ABC):
 
         # If streams are configured, set up the Airbyte source
         if self.streams:
+            config = {
+                "repositories": [os.getenv("REPOSITORIES", "")],
+                "credentials": {
+                    "personal_access_token": os.getenv("GITHUB_TOKEN", ""),
+                },
+            }
+
+            self.config_node = self.sink.get_node(
+                "Config", id=os.getenv("ORGANIZATION_ID", "")
+            )
+
+            if self.config_node is not None:
+                print(
+                    "🔄 Retrieving data from Github at {}...".format(
+                        self.config_node["last_retrieve_date"]
+                    )
+                )
+                config["start_date"] = self.config_node["last_retrieve_date"]
+            else:
+                print("🔄 Retrieving all data from Github ...")
+
             self.source = ab.get_source(
                 "source-github",
                 install_if_missing=True,
-                config={
-                    "repositories": [os.getenv("REPOSITORIES", "")],
-                    "credentials": {
-                        "personal_access_token": os.getenv("GITHUB_TOKEN", ""),
-                    },
-                },
+                config=config,
             )
 
             # Check if source credentials and config are valid
@@ -187,6 +204,18 @@ class ExtractBase(ABC):
         node = Node(node_type, **data)
         self.sink.save_node(node, node_type, id_field)
         return node
+
+    def __create_retrieve(self) -> None:
+        """Load retrieve date."""  # noqa: D401
+        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        start_date = today.isoformat() + "Z"
+        self.config_node = Node(
+            "Config",
+            id=os.getenv("ORGANIZATION_ID", ""),
+            name=os.getenv("ORGANIZATION", ""),
+            last_retrieve_date=start_date,
+        )
+        self.sink.save_node(self.config_node, "Config", "id")
 
     def __load_organization(self) -> None:
         """Loads the organization node from Neo4j.
