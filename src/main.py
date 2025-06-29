@@ -1,7 +1,10 @@
 from src.extract.extract_eo import ExtractEO  # noqa: I001
 from src.extract.extract_ciro import ExtractCIRO  # noqa: I001
 from src.extract.extract_cmpo import ExtractCMPO  # noqa: I001
-from src.extract.extract_cmpo_software_artifact import ExtractCMPOSoftwareArtifact # noqa: I001
+from src.extract.extract_cmpo_software_artifact import (
+    ExtractCMPOSoftwareArtifact,
+)  # noqa: I001
+from src.report.team_report import TeamReport
 
 
 def main() -> None:
@@ -28,6 +31,20 @@ def main() -> None:
     ExtractCIRO().run()
 
     ExtractCMPOSoftwareArtifact().run()
+
+    extractor = TeamReport()
+
+    markdown = extractor.create_people_markdown()
+    output_path = "/data/people.md"
+    extractor.save_markdown_to_file(markdown, output_path)
+
+    print(f"Markdown saved to: {output_path}")
+
+    markdown = extractor.create_team_markdown()
+    output_path = "/data/team.md"
+    extractor.save_markdown_to_file(markdown, output_path)
+
+    print(f"Markdown saved to: {output_path}")
 
 
 if __name__ == "__main__":

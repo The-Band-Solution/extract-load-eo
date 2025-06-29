@@ -27,7 +27,7 @@ class SinkNeo4j:
             auth=(os.getenv("NEO4J_USERNAME", ""), os.getenv("NEO4J_PASSWORD", "")),
         )
 
-    def save_node(self, element: Any, type: str, id_element: str) -> None:
+    def save_node(self, element: Any, type_elment: str, id_element: str) -> None:
         """Saves or updates a node in the Neo4j graph.
 
         If a node with the specified label (`type`) and unique ID (`id_element`)
@@ -36,11 +36,11 @@ class SinkNeo4j:
         Args:
         ----
             element (Any): The py2neo Node object to save.
-            type (str): The label of the node (e.g., "User", "Repository").
+            type_elment (str): The label of the node (e.g., "User", "Repository").
             id_element (str): key that identify a node
 
         """  # noqa: D401
-        self.graph.merge(element, type, id_element)
+        self.graph.merge(element, type_elment.strip().lower(), id_element)
 
     def save_relationship(self, element: Relationship) -> None:
         """Saves or updates a relationship in the Neo4j graph.

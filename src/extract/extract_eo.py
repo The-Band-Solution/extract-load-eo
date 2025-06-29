@@ -64,6 +64,7 @@ class ExtractEO(ExtractBase):
         for member in self.team_members.itertuples():
             data = self.transform(member)
             data["id"] = member.login
+            data["name"] = member.login
 
             person_node = self.create_node(data, "Person", "id")
 
@@ -73,6 +74,7 @@ class ExtractEO(ExtractBase):
             if member.team_slug:
                 # Create TeamMember node (membership instance)
                 data["id"] = f"{member.login}-{member.team_slug}"
+                data["name"] = member.login
 
                 team_member_node = self.create_node(data, "TeamMember", "id")
 

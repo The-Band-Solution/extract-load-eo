@@ -21,7 +21,6 @@ class ExtractBase(ABC):
     """  # noqa: D205
 
     # Class attributes
-    organization: str = ""  # Organization name or ID
     organization_node: Any = None  # Neo4j Node object representing the organization
     token: str = ""  # API token (e.g., GitHub token)
     client: Any = None  # API client (to be defined in subclasses)
@@ -196,10 +195,12 @@ class ExtractBase(ABC):
         using the client information (e.g., GitHub organization name).
         """  # noqa: D401
         # Attempt to retrieve the organization node
+        organization_id = os.getenv("ORGANIZATION_ID", "")
+        print(f"Buscando a organizacao: {organization_id}")
         self.organization_node = self.sink.get_node(
             "Organization", id=os.getenv("ORGANIZATION_ID", "")
         )
-
+        print(f"Buscando a organizacao: {self.organization_node}")
         # If the node does not exist, create it
         if self.organization_node is None:
             print("🔄 Creating Organization node...")
