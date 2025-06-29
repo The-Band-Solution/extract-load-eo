@@ -24,7 +24,7 @@ class ExtractCMPOSoftwareArtifact(ExtractBase):
         """Retrive data."""
         pass
 
-    def _load_commits(self) -> Any:
+    def _load_commits(self) -> Any: # TODO: pegar sempre a data corrente ou da ultima importacao
         """Load all commits with associated repository names from Neo4j."""
         query = """
         MATCH (c:Commit)
