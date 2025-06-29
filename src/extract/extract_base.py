@@ -8,6 +8,7 @@ from sink.sink_neo4j import SinkNeo4j  # noqa: I001
 import json  # noqa: I001
 from abc import ABC, abstractmethod  # noqa: I001
 from types import SimpleNamespace  # noqa: I001
+from datetime import datetime  #  noqa: I001
 
 
 class ExtractBase(ABC):
@@ -183,6 +184,7 @@ class ExtractBase(ABC):
             Node: a node in a graph
 
         """  # noqa: D401
+        data["created_node_at"] = datetime.now().isoformat()
         node = Node(node_type, **data)
         self.sink.save_node(node, node_type, id_field)
         return node

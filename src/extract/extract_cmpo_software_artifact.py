@@ -13,8 +13,8 @@ class ExtractCMPOSoftwareArtifact(ExtractBase):
         """Initialize the Neo4j connection and GitHub client."""
         super().__init__()
         self.graph = Graph(
-            os.getenv("NEO4J_URI", ""),
-            auth=("neo4j", ""),
+            "bolt://neo4j:7687",
+            auth=(os.getenv("NEO4J_USERNAME", ""), os.getenv("NEO4J_PASSWORD", "")),
         )
         self.token = os.getenv("GITHUB_TOKEN", "")
         self.github = Github(self.token)
@@ -27,8 +27,8 @@ class ExtractCMPOSoftwareArtifact(ExtractBase):
     def _load_commits(self) -> Any:
         """Load all commits with associated repository names from Neo4j."""
         query = """
-        MATCH (c:Commit)-[:BELONGS_TO]->(r:Repository)
-        RETURN c.sha AS sha, r.name AS repository
+        MATCH (c:Commit)
+        RETURN c.sha AS sha, c.repository AS repository
         """
         return self.graph.run(query).data()
 
@@ -63,7 +63,9 @@ class ExtractCMPOSoftwareArtifact(ExtractBase):
                     self.create_relationship(commit_node, "has", file_node)
                     self.create_relationship(file_node, "commited", commit_node)
 
-            print(f"✅ Processed: {sha} | {repository}")
+                    print(f"✅ Processed: file {file.sha} | {sha}")
+
+            print(f"✅ Processed: Commit {sha} | {repository}")
 
         except Exception as e:
             print(f"⚠️ Error processing {sha} | {repository}: {e}")
