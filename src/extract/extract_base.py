@@ -223,9 +223,6 @@ class ExtractBase(ABC):
         If the node does not exist, it creates and persists it
         using the client information (e.g., GitHub organization name).
         """  # noqa: D401
-        # Attempt to retrieve the organization node
-        organization_id = os.getenv("ORGANIZATION_ID", "")
-        print(f"Buscando a organizacao: {organization_id}")
         self.organization_node = self.sink.get_node(
             "Organization", id=os.getenv("ORGANIZATION_ID", "")
         )

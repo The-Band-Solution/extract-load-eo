@@ -1,10 +1,4 @@
-from src.extract.extract_eo import ExtractEO  # noqa: I001
 from src.extract.extract_ciro import ExtractCIRO  # noqa: I001
-from src.extract.extract_cmpo import ExtractCMPO  # noqa: I001
-from src.extract.extract_cmpo_software_artifact import (
-    ExtractCMPOSoftwareArtifact,
-)  # noqa: I001
-from src.extract.create_config import CreateConfig
 
 
 def main() -> None:
@@ -22,17 +16,17 @@ def main() -> None:
     are created before dependent entities like issues and pull requests.
     """
     # Run the EO extractor (Teams, Members, Projects)
-    ExtractEO().run()
+    # ExtractEO().run()
 
     # Run the CMPO extractor (Repositories, Commits, Branches, Projects)
-    ExtractCMPO().run()
+    # ExtractCMPO().run()
 
     # Run the CIRO extractor (Issues, Milestones, Pull Requests, Labels)
     ExtractCIRO().run()
 
-    ExtractCMPOSoftwareArtifact().run()
+    # ExtractCMPOSoftwareArtifact().run()
     # TODO: Criar um config por dominio
-    CreateConfig().run()
+    # CreateConfig().run()
 
 
 if __name__ == "__main__":

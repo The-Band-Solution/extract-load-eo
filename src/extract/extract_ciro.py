@@ -72,6 +72,9 @@ class ExtractCIRO(ExtractBase):
             )
 
             self.create_relationship(repository_node, "has", milestone_node)
+            repository = milestone.repository
+            milestone_title = milestone.title
+            print(f"🔄 Linking Repository to Milestone: {repository}-{milestone_title}")
 
     def __load_issue(self) -> None:
         """Loads issues into the Neo4j graph and creates all relevant
@@ -162,6 +165,7 @@ class ExtractCIRO(ExtractBase):
         for label in self.issue_labels.itertuples(index=False):
             data = self.transform(label)
             node = self.create_node(data, "Label", "id")
+            print(f"🔄 Creating Label {label.name} for Repository {label.repository}")
 
             repository_node = self.get_node("Repository", full_name=label.repository)
 
@@ -175,8 +179,23 @@ class ExtractCIRO(ExtractBase):
         to create nodes and relationships for commits in the graph.
         """  # noqa: D401
         print(self.pull_request_commits.columns)
-        # for pull_request_commit in self.pull_request_commits.itertuples(index=False):
-        #    print(pull_request_commit)
+        for pull_request_commit in self.pull_request_commits.itertuples(index=False):
+            data = self.transform(pull_request_commit)
+            commit_node = self.get_node("Commit", sha=data["sha"])
+            pull_request_node = self.get_node(
+                "PullRequest", repository=data["repository"], number=data["pull_number"]
+            )
+            if commit_node is not None and pull_request_node is not None:
+                self.create_relationship(commit_node, "committed", pull_request_node)
+                self.create_relationship(pull_request_node, "has", commit_node)
+                print("link entre commit e pull_request")
+            else:
+                sha = data["sha"]
+                repository = data["repository"]
+                pull_number = data["pull_number"]
+                print(
+                    f"link commit {sha} pull request {repository}-{pull_number}"
+                )
 
     def __load_pull_requests(self) -> None:
         """Loads pull requests into the Neo4j graph, creates pull request nodes,
@@ -195,17 +214,28 @@ class ExtractCIRO(ExtractBase):
 
             if pull_request.labels:
                 labels = json.loads(pull_request.labels)
-                print(labels)
+                for label in labels:
+                    label_node = self.get_node("Label", id=label["id"])
+                    self.create_relationship(node, "labeled", label_node)
+
             if pull_request.milestone:
-                pass
+                milestone = json.loads(pull_request.milestone)
+                print(milestone)
+                milestone_node = self.get_node("Milestone", id=milestone["id"])
+                if milestone_node is not None:
+                    self.create_relationship(node, "has", milestone_node)
+
             if pull_request.merge_commit_sha:
-                pass
-            if pull_request.assignee:
-                pass
-            if pull_request.assignees:
-                pass
-            if pull_request.user:
-                pass
+                print(pull_request.merge_commit_sha)
+
+                commit_node = self.get_node("Commit", sha=pull_request.merge_commit_sha)
+
+                if commit_node is not None:
+                    self.create_relationship(node, "merged", commit_node)
+            print(
+                f"🔄 Creating link between users and pull_request {pull_request.title}"
+            )
+            self._link_issue_to_users(node, pull_request)
 
     def run(self) -> None:
         """Orchestrates the entire extraction process.
@@ -215,9 +245,9 @@ class ExtractCIRO(ExtractBase):
         """
         print("🔄 Extracting CIRO data ...")
         self.fetch_data()
-        self.__load_labels()
-        self.__load_milestones()
-        self.__load_issue()
-        self.__load_pull_requests()
+        # self.__load_labels()
+        # self.__load_milestones()
+        # self.__load_pull_requests()
         self.__load_pull_request_commit()
+        # self.__load_issue()
         print("✅ Extraction completed successfully!")
