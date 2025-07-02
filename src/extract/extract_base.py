@@ -235,8 +235,8 @@ class ExtractBase(ABC):
             return node
         except Exception as e:
             logger.error(
-                f"Failed to retrieve node '{type_element}'"+
-                f" with properties {properties}: {e}"
+                f"Failed to retrieve node '{type_element}'"
+                + f" with properties {properties}: {e}"
             )
             raise
 
