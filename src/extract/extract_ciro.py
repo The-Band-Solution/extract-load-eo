@@ -1,17 +1,15 @@
 from src.extract.extract_base import ExtractBase  # noqa: I001
 from typing import Any  # noqa: I001
 from py2neo import Node  # noqa: I001
+from src.config.logging_config import LoggerFactory  # noqa: I001
 import json  # noqa: I001
+
+logger = LoggerFactory.get_logger("extractor")
 
 
 class ExtractCIRO(ExtractBase):
-    """Class responsible for extracting data fand save on  CIRO dataset.
+    """Extract and persist data for the CIRO dataset using Airbyte and Neo4j."""
 
-    It loads milestones, issues, pull requests, pull request commits,
-    and labels from the Airbyte source and persists them into a Neo4j graph database.
-    """
-
-    # Dataframes loaded from the cache
     milestones: Any = None
     issues: Any = None
     pull_request_commits: Any = None
@@ -20,11 +18,7 @@ class ExtractCIRO(ExtractBase):
     projects: Any = None
 
     def __init__(self) -> None:
-        """Post-initialization hook.
-
-        Defines the list of streams to fetch and calls the parent
-        initialization to set up Airbyte and Neo4j connections.
-        """
+        """Initialize the extractor and define streams to load from Airbyte."""
         self.streams = [
             "issue_milestones",
             "issues",
@@ -35,96 +29,88 @@ class ExtractCIRO(ExtractBase):
         super().__init__()
 
     def fetch_data(self) -> None:
-        """Loads the data from Airbyte cache into pandas DataFrames."""  # noqa: D401
+        """Fetch data from Airbyte cache and store in memory as pandas DataFrames."""
         self.load_data()
 
         if "issue_milestones" in self.cache:
             self.milestones = self.cache["issue_milestones"].to_pandas()
-            print(f"✅ {len(self.milestones)} issue_milestones loaded.")
+            logger.info(f"{len(self.milestones)} issue_milestones loaded.")
 
         if "issues" in self.cache:
             self.issues = self.cache["issues"].to_pandas()
-            print(f"✅ {len(self.issues)} issues loaded.")
+            logger.info(f"{len(self.issues)} issues loaded.")
 
         if "pull_request_commits" in self.cache:
             self.pull_request_commits = self.cache["pull_request_commits"].to_pandas()
-            print(f"✅ {len(self.pull_request_commits)} pull_request_commits loaded.")
+            logger.info(
+                f"{len(self.pull_request_commits)} pull_request_commits loaded."
+            )
 
         if "pull_requests" in self.cache:
             self.pull_requests = self.cache["pull_requests"].to_pandas()
-            print(f"✅ {len(self.pull_requests)} pull_requests loaded.")
+            logger.info(f"{len(self.pull_requests)} pull_requests loaded.")
 
         if "issue_labels" in self.cache:
             self.issue_labels = self.cache["issue_labels"].to_pandas()
-            print(f"✅ {len(self.issue_labels)} issue_labels loaded.")
+            logger.info(f"{len(self.issue_labels)} issue_labels loaded.")
 
     def __load_milestones(self) -> None:
-        """Loads milestones into the Neo4j graph as nodes and creates relationships
-        to their respective repositories.
-        """  # noqa: D205, D401
+        """Create Milestone nodes and link them to their respective repositories."""
         for milestone in self.milestones.itertuples(index=False):
             data = self.transform(milestone)
-
             milestone_node = self.create_node(data, "Milestone", "id")
-
             repository_node = self.get_node(
                 "Repository", full_name=milestone.repository
             )
-
             self.create_relationship(repository_node, "has", milestone_node)
-            repository = milestone.repository
-            milestone_title = milestone.title
-            print(f"🔄 Linking Repository to Milestone: {repository}-{milestone_title}")
+            logger.info(
+                f"Link Repository to Milestone: {milestone.repository}{milestone.title}"
+            )
 
     def __load_issue(self) -> None:
-        """Loads issues into the Neo4j graph and creates all relevant
-        nodes and relationships.
-        """  # noqa: D205, D401
+        """Create Issue nodes and link."""
         for issue in self.issues.itertuples(index=False):
             data = self.transform(issue)
-
             node = self._create_issue_node(data, issue)
             self._link_issue_to_repository(node, issue)
             self._link_issue_to_milestone(node, issue)
             self._link_issue_to_users(node, issue)
             self._link_issue_to_labels(node, issue)
-            # Ligar com o pull request
 
     def _create_issue_node(self, data: dict[str, Any], issue: Any) -> Node:
+        """Create the Issue node in Neo4j."""
         node = self.create_node(data, "Issue", "id")
-        print(f"🔄 Creating Issue: {issue.title}")
-
+        logger.info(f"Creating Issue: {issue.title}")
         return node
 
     def _link_issue_to_repository(self, node: Node, issue: Any) -> None:
+        """Link the Issue node to its repository."""
         repository_node = self.get_node("Repository", full_name=issue.repository)
         if repository_node:
             self.create_relationship(repository_node, "has", node)
-            print(f"🔄 Linking Repository to Issue: {issue.title}-{issue.repository}")
+            logger.info(
+                f"Linking Repository to Issue: {issue.title}-{issue.repository}"
+            )
 
     def _link_issue_to_milestone(self, node: Node, issue: Any) -> None:
+        """Link the Issue to its Milestone, if any."""
         if issue.milestone:
             milestone = self.transform_object(issue.milestone)
-
-            ## Errado precisa buscar no base
             milestone_node = self.get_node("Milestone", id=milestone.id)
-
             if milestone_node:
                 self.create_relationship(milestone_node, "has", node)
-                print(f"🔄 Linking Milestone to Issue: {issue.title}-{milestone.id}")
+                logger.info(f"Linking Milestone to Issue: {issue.title}-{milestone.id}")
 
     def _link_issue_to_users(self, node: Node, issue: Any) -> None:
-        # Creator
+        """Link the Issue to its creator and assignees."""
         if issue.user:
             self._create_user_relationship(node, issue.user, "created_by", issue.title)
 
-        # Single assignee
         if issue.assignee:
             self._create_user_relationship(
                 node, issue.assignee, "assigned_to", issue.title
             )
 
-        # Multiple assignees
         if issue.assignees:
             assignees = json.loads(issue.assignees)
             for assignee in assignees:
@@ -135,22 +121,22 @@ class ExtractCIRO(ExtractBase):
     def _create_user_relationship(
         self, node: Node, user_data: Any, rel_type: str, issue_title: str
     ) -> None:
+        """Create a relationship between the Issue and a user (creator or assignee)."""
         user = (
             user_data
             if isinstance(user_data, dict)
             else self.transform_object(user_data)
         )
-        login = user.login if hasattr(user, "login") else user["login"]
-
+        login = user.get("login") if isinstance(user, dict) else user.login
         user_node = self.get_node("Person", id=login)
-
         if user_node:
             self.create_relationship(node, rel_type, user_node)
-            print(
-                f"🔄 Linking {rel_type} between Issue and User: {login}-{issue_title}"
+            logger.info(
+                f"Linking {rel_type} between Issue and User: {login}-{issue_title}"
             )
 
     def _link_issue_to_labels(self, node: Node, issue: Any) -> None:
+        """Link the Issue to its associated Labels."""
         if issue.labels:
             labels = json.loads(issue.labels)
             for label in labels:
@@ -159,89 +145,69 @@ class ExtractCIRO(ExtractBase):
                     self.create_relationship(node, "labeled", label_node)
 
     def __load_labels(self) -> None:
-        """Loads labels and creates relationships with repositories."""  # noqa: D401
-        # noqa: D401
-
+        """Create Label nodes and link them to their respective repositories."""
         for label in self.issue_labels.itertuples(index=False):
             data = self.transform(label)
             node = self.create_node(data, "Label", "id")
-            print(f"🔄 Creating Label {label.name} for Repository {label.repository}")
-
+            logger.info(
+                f"Creating Label {label.name} for Repository {label.repository}"
+            )
             repository_node = self.get_node("Repository", full_name=label.repository)
-
-            if repository_node is not None:
+            if repository_node:
                 self.create_relationship(repository_node, "has", node)
 
     def __load_pull_request_commit(self) -> None:
-        """Loads pull request commit data.
-
-        Currently this method only prints commit information. Can be extended
-        to create nodes and relationships for commits in the graph.
-        """  # noqa: D401
-        for pull_request_commit in self.pull_request_commits.itertuples(index=False):
-            data = self.transform(pull_request_commit)
+        """Link commits to their respective Pull Requests."""
+        for pr_commit in self.pull_request_commits.itertuples(index=False):
+            data = self.transform(pr_commit)
             commit_node = self.get_node("Commit", sha=data["sha"])
-            pull_request_node = self.get_node(
+            pr_node = self.get_node(
                 "PullRequest", repository=data["repository"], number=data["pull_number"]
             )
-            if commit_node is not None and pull_request_node is not None:
-                self.create_relationship(commit_node, "committed", pull_request_node)
-                self.create_relationship(pull_request_node, "has", commit_node)
-                print("Creating link entre commit e pull_request")
+            if commit_node and pr_node:
+                self.create_relationship(commit_node, "committed", pr_node)
+                self.create_relationship(pr_node, "has", commit_node)
+                logger.info("Created link between commit and pull_request")
             else:
-                print("nao foi encontrado commit ou pull_request")
+                logger.warning("Commit or pull_request not found")
 
     def __load_pull_requests(self) -> None:
-        """Loads pull requests into the Neo4j graph, creates pull request nodes,
-        and builds relationships with repositories and (in the future) labels,
-        merge commits, users, and assignees.
-        """  # noqa: D205, D401
-        for pull_request in self.pull_requests.itertuples(index=False):
-            data = self.transform(pull_request)
+        """Create Pull Request nodes and link."""
+        for pr in self.pull_requests.itertuples(index=False):
+            data = self.transform(pr)
             node = self.create_node(data, "PullRequest", "id")
 
-            repository_node = self.get_node(
-                "Repository", full_name=pull_request.repository
-            )
-
+            repository_node = self.get_node("Repository", full_name=pr.repository)
             self.create_relationship(repository_node, "has", node)
 
-            if pull_request.labels:
-                labels = json.loads(pull_request.labels)
+            if pr.labels:
+                labels = json.loads(pr.labels)
                 for label in labels:
                     label_node = self.get_node("Label", id=label["id"])
-                    self.create_relationship(node, "labeled", label_node)
+                    if label_node:
+                        self.create_relationship(node, "labeled", label_node)
 
-            if pull_request.milestone:
-                milestone = json.loads(pull_request.milestone)
-                print(milestone)
+            if pr.milestone:
+                milestone = json.loads(pr.milestone)
                 milestone_node = self.get_node("Milestone", id=milestone["id"])
-                if milestone_node is not None:
+                if milestone_node:
                     self.create_relationship(node, "has", milestone_node)
 
-            if pull_request.merge_commit_sha:
-                print(pull_request.merge_commit_sha)
-
-                commit_node = self.get_node("Commit", sha=pull_request.merge_commit_sha)
-
-                if commit_node is not None:
+            if pr.merge_commit_sha:
+                commit_node = self.get_node("Commit", sha=pr.merge_commit_sha)
+                if commit_node:
                     self.create_relationship(node, "merged", commit_node)
-            print(
-                f"🔄 Creating link between users and pull_request {pull_request.title}"
-            )
-            self._link_issue_to_users(node, pull_request)
+
+            logger.info(f"Creating links between users and pull_request {pr.title}")
+            self._link_issue_to_users(node, pr)
 
     def run(self) -> None:
-        """Orchestrates the entire extraction process.
-
-        Loads data, processes labels, milestones, issues, pull requests, and commits,
-        and saves them into the Neo4j graph.
-        """
-        print("🔄 Extracting CIRO data ...")
+        """Run the full extraction and persistence process."""
+        logger.info("🔄 Extracting CIRO data ...")
         self.fetch_data()
         self.__load_labels()
         self.__load_milestones()
         self.__load_pull_requests()
         self.__load_pull_request_commit()
         self.__load_issue()
-        print("✅ Extraction completed successfully!")
+        logger.info("✅ Extraction completed successfully!")

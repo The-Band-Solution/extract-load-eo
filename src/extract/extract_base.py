@@ -17,14 +17,7 @@ logger = LoggerFactory.get_logger("extractor")
 
 
 class ExtractBase(ABC):
-    """Base class for data extraction using Airbyte as the source
-    and Neo4j as the destination.
-
-    This class provides core functionalities for reading data,
-    transforming records, and persisting nodes and relationships
-    into a Neo4j graph database.
-
-    """
+    """Base class for data extraction."""
 
     # Class attributes
     config_node: Any = None  # Config node
@@ -37,13 +30,7 @@ class ExtractBase(ABC):
     sink: Any = None  # Data sink, in this case Neo4j (via SinkNeo4j)
 
     def __init__(self) -> None:
-        """Post-initialization hook.
-
-        Loads environment variables, initializes the Neo4j sink,
-        configures the Airbyte source (if streams are set),
-        and loads the organization node into the graph.
-
-        """
+        """Post-initialization hook."""
         logger.info("Initializing ExtractBase...")
         load_dotenv()
         logger.debug("Environment variables loaded.")
@@ -86,13 +73,9 @@ class ExtractBase(ABC):
 
             if self.config_node is not None:
                 config["start_date"] = self.config_node["last_retrieve_date"]
-                logger.info(
-                    f"Using start_date from existing Config node: {config['start_date']}"
-                )
+                logger.info(f"Using start_date: {config['start_date']}")
             else:
-                logger.info(
-                    "No existing Config node found. Start date will not be set from config."
-                )
+                logger.info("No existing Config node found.")
                 self.__create_retrieve()  # Ensure config_node is created if not exists
 
             try:
@@ -220,7 +203,7 @@ class ExtractBase(ABC):
 
         """
         logger.info(
-            f"Attempting to retrieve node of type '{type_element}' with properties: {properties}"
+            f"Retrieve node of type '{type_element}' with properties: {properties}"
         )
         try:
             node = self.sink.get_node(type_element, **properties)

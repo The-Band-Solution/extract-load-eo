@@ -1,0 +1,15 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+exporters:
+  clickhouse:
+    endpoint: tcp://clickhouse:9000?dial_timeout=10s&compress=lz4
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp]
+      exporters: [clickhouse]
