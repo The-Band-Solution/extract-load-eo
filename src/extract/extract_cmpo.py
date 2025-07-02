@@ -94,7 +94,8 @@ class ExtractCMPO(ExtractBase):
         """  # noqa: D205, D401
         for commit in self.commits.itertuples(index=False):
             data = self.transform(commit)
-            data["id"] = data["sha"] + "-" + data["repository"]
+
+            data["id"] = data["sha"]
 
             commit_data = json.loads(commit.commit)
 
@@ -133,12 +134,8 @@ class ExtractCMPO(ExtractBase):
         for commit in self.commits.itertuples(index=False):
             parents = json.loads(commit.parents)
             for parent in parents:
-                commit_node = self.get_node(
-                    "Commit", id=commit.sha + "-" + commit.repository
-                )
-                parent_node = self.get_node(
-                    "Commit", id=parent["sha"] + "-" + commit.repository
-                )
+                commit_node = self.get_node("Commit", id=commit.sha)
+                parent_node = self.get_node("Commit", id=parent["sha"])
                 self.create_relationship(parent_node, "is_parent", commit_node)
                 self.create_relationship(commit_node, "has_parent", parent_node)
 
