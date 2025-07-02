@@ -189,8 +189,7 @@ class ExtractCIRO(ExtractBase):
                 self.create_relationship(pull_request_node, "has", commit_node)
                 print("Creating link entre commit e pull_request")
             else:
-                print ("nao foi encontrado commit ou pull_request")
-                
+                print("nao foi encontrado commit ou pull_request")
 
     def __load_pull_requests(self) -> None:
         """Loads pull requests into the Neo4j graph, creates pull request nodes,

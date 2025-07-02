@@ -1,6 +1,9 @@
 from src.extract.extract_cmpo import ExtractCMPO  # noqa: I001
 from src.extract.extract_ciro import ExtractCIRO  # noqa: I001
 from src.extract.extract_eo import ExtractEO  # noqa: I001
+from src.config.logging_config import configure_logger  # noqa: I001
+
+logger = configure_logger(__name__)
 
 
 def main() -> None:
@@ -17,20 +20,23 @@ def main() -> None:
     The order ensures that foundational elements like repositories, teams, and projects
     are created before dependent entities like issues and pull requests.
     """
-    # Run the EO extractor (Teams, Members, Projects)
-    ExtractEO().run()
+    logger.info("🚀 Starting extraction pipeline")
 
-    # Run the CMPO extractor (Repositories, Commits, Branches, Projects)
-    ExtractCMPO().run()
+    try:
+        # Run the EO extractor (Teams, Members, Projects)
+        ExtractEO().run()
 
-    # Run the CIRO extractor (Issues, Milestones, Pull Requests, Labels)
-    ExtractCIRO().run()
+        # Run the CMPO extractor (Repositories, Commits, Branches, Projects)
+        ExtractCMPO().run()
 
-    # ExtractCMPOSoftwareArtifact().run()
-    # TODO: Criar um config por dominio
-    # CreateConfig().run()
+        # Run the CIRO extractor (Issues, Milestones, Pull Requests, Labels)
+        ExtractCIRO().run()
+
+        logger.info("✅ Extraction pipeline completed successfully")
+
+    except Exception:
+        logger.exception("❌ Extraction pipeline failed with an exception")
 
 
 if __name__ == "__main__":
-    # Execute the main function when this script is run directly.
     main()

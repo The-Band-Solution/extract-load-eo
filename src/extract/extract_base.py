@@ -38,7 +38,6 @@ class ExtractBase(ABC):
         and loads the organization node into the graph.
         """
         load_dotenv()
-
         # Initialize the Neo4j sink
         self.sink = SinkNeo4j()
 
@@ -59,14 +58,7 @@ class ExtractBase(ABC):
             )
 
             if self.config_node is not None:
-                print(
-                    "🔄 Retrieving data from Github at {}...".format(
-                        self.config_node["last_retrieve_date"]
-                    )
-                )
                 config["start_date"] = self.config_node["last_retrieve_date"]
-            else:
-                print("🔄 Retrieving all data from Github ...")
 
             self.source = ab.get_source(
                 "source-github",
@@ -218,19 +210,12 @@ class ExtractBase(ABC):
         self.sink.save_node(self.config_node, "Config", "id")
 
     def __load_organization(self) -> None:
-        """Loads the organization node from Neo4j.
-
-        If the node does not exist, it creates and persists it
-        using the client information (e.g., GitHub organization name).
-        """  # noqa: D401
+        """Loads the organization node from Neo4j."""  # noqa: D401
         self.organization_node = self.sink.get_node(
             "Organization", id=os.getenv("ORGANIZATION_ID", "")
         )
-        print(f"Buscando a organizacao: {self.organization_node}")
         # If the node does not exist, create it
         if self.organization_node is None:
-            print("🔄 Creating Organization node...")
-
             self.organization_node = Node(
                 "Organization",
                 id=os.getenv("ORGANIZATION_ID", ""),

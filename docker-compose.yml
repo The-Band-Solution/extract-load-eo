@@ -9,11 +9,15 @@ services:
       - REPOSITORIES=${REPOSITORIES}
       - ORGANIZATION_ID=${ORGANIZATION_ID}
       - ORGANIZATION=${ORGANIZATION}
+      - LOG_DIR=/logs
     networks:
       - theband-network
     volumes:
       - ./output:/data
-
+      - ./logs:/logs
+ 
 networks:
   theband-network:
     external: true
+
+
