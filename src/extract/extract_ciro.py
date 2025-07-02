@@ -27,9 +27,11 @@ class ExtractCIRO(ExtractBase):
             "issue_labels",
         ]
         super().__init__()
+        logger.debug("Initialized ExtractCIRO with streams: %s", self.streams)
 
     def fetch_data(self) -> None:
         """Fetch data from Airbyte cache and store in memory as pandas DataFrames."""
+        logger.info("Fetching data from Airbyte cache...")
         self.load_data()
 
         if "issue_milestones" in self.cache:
@@ -56,21 +58,34 @@ class ExtractCIRO(ExtractBase):
 
     def __load_milestones(self) -> None:
         """Create Milestone nodes and link them to their respective repositories."""
+        logger.info("Loading milestones...")
         for milestone in self.milestones.itertuples(index=False):
             data = self.transform(milestone)
+            logger.debug("Milestone transformed: %s", data)
+
             milestone_node = self.create_node(data, "Milestone", "id")
+            logger.debug("Milestone node created: %s", milestone_node)
+
             repository_node = self.get_node(
                 "Repository", full_name=milestone.repository
             )
-            self.create_relationship(repository_node, "has", milestone_node)
-            logger.info(
-                f"Link Repository to Milestone: {milestone.repository}{milestone.title}"
-            )
+            if repository_node:
+                self.create_relationship(repository_node, "has", milestone_node)
+                logger.info(
+                    "Linked Repository to Milestone: %s - %s",
+                    milestone.repository,
+                    milestone.title
+                )
+            else:
+                logger.warning(f"Repository not found for milestone: {milestone.title}")
 
     def __load_issue(self) -> None:
         """Create Issue nodes and link."""
+        logger.info("Loading issues...")
         for issue in self.issues.itertuples(index=False):
             data = self.transform(issue)
+            logger.debug("Issue transformed: %s", data)
+
             node = self._create_issue_node(data, issue)
             self._link_issue_to_repository(node, issue)
             self._link_issue_to_milestone(node, issue)
@@ -79,8 +94,9 @@ class ExtractCIRO(ExtractBase):
 
     def _create_issue_node(self, data: dict[str, Any], issue: Any) -> Node:
         """Create the Issue node in Neo4j."""
+        logger.debug("Creating Issue node...")
         node = self.create_node(data, "Issue", "id")
-        logger.info(f"Creating Issue: {issue.title}")
+        logger.info(f"Issue node created: {issue.title}")
         return node
 
     def _link_issue_to_repository(self, node: Node, issue: Any) -> None:
@@ -89,17 +105,24 @@ class ExtractCIRO(ExtractBase):
         if repository_node:
             self.create_relationship(repository_node, "has", node)
             logger.info(
-                f"Linking Repository to Issue: {issue.title}-{issue.repository}"
+                f"Linked Repository to Issue: {issue.title} - {issue.repository}"
             )
+        else:
+            logger.warning(f"Repository not found for issue: {issue.title}")
 
     def _link_issue_to_milestone(self, node: Node, issue: Any) -> None:
         """Link the Issue to its Milestone, if any."""
         if issue.milestone:
+            logger.debug(f"Linking Issue to Milestone: {issue.title}")
             milestone = self.transform_object(issue.milestone)
             milestone_node = self.get_node("Milestone", id=milestone.id)
             if milestone_node:
                 self.create_relationship(milestone_node, "has", node)
-                logger.info(f"Linking Milestone to Issue: {issue.title}-{milestone.id}")
+                logger.info(
+                    f"Linked Milestone to Issue: {issue.title} - {milestone.id}"
+                )
+            else:
+                logger.warning(f"Milestone not found for issue: {issue.title}")
 
     def _link_issue_to_users(self, node: Node, issue: Any) -> None:
         """Link the Issue to its creator and assignees."""
@@ -113,6 +136,9 @@ class ExtractCIRO(ExtractBase):
 
         if issue.assignees:
             assignees = json.loads(issue.assignees)
+            logger.debug(
+                f"Processing {len(assignees)} assignees for issue: {issue.title}"
+            )
             for assignee in assignees:
                 self._create_user_relationship(
                     node, assignee, "assigned_to", issue.title
@@ -132,32 +158,44 @@ class ExtractCIRO(ExtractBase):
         if user_node:
             self.create_relationship(node, rel_type, user_node)
             logger.info(
-                f"Linking {rel_type} between Issue and User: {login}-{issue_title}"
+                f"Linked {rel_type} between Issue and User: {login} - {issue_title}"
+            )
+        else:
+            logger.warning(
+                f"User node not found: {login} for {rel_type} on {issue_title}"
             )
 
     def _link_issue_to_labels(self, node: Node, issue: Any) -> None:
         """Link the Issue to its associated Labels."""
         if issue.labels:
             labels = json.loads(issue.labels)
+            logger.debug(f"Processing {len(labels)} labels for issue: {issue.title}")
             for label in labels:
                 label_node = self.get_node("Label", id=label["id"])
                 if label_node:
                     self.create_relationship(node, "labeled", label_node)
+                    logger.info(f"Labeled issue {issue.title} with {label['name']}")
+                else:
+                    logger.warning(
+                        f"Label not found: {label['id']} for issue {issue.title}"
+                    )
 
     def __load_labels(self) -> None:
         """Create Label nodes and link them to their respective repositories."""
+        logger.info("Loading labels...")
         for label in self.issue_labels.itertuples(index=False):
             data = self.transform(label)
             node = self.create_node(data, "Label", "id")
-            logger.info(
-                f"Creating Label {label.name} for Repository {label.repository}"
-            )
+            logger.info(f"Created Label {label.name} for Repository {label.repository}")
             repository_node = self.get_node("Repository", full_name=label.repository)
             if repository_node:
                 self.create_relationship(repository_node, "has", node)
+            else:
+                logger.warning(f"Repository not found for label: {label.name}")
 
     def __load_pull_request_commit(self) -> None:
         """Link commits to their respective Pull Requests."""
+        logger.info("Linking commits to pull requests...")
         for pr_commit in self.pull_request_commits.itertuples(index=False):
             data = self.transform(pr_commit)
             commit_node = self.get_node("Commit", sha=data["sha"])
@@ -167,18 +205,23 @@ class ExtractCIRO(ExtractBase):
             if commit_node and pr_node:
                 self.create_relationship(commit_node, "committed", pr_node)
                 self.create_relationship(pr_node, "has", commit_node)
-                logger.info("Created link between commit and pull_request")
+                logger.info("Linked commit to pull_request")
             else:
-                logger.warning("Commit or pull_request not found")
+                logger.warning(
+                    "Commit or PullRequest not found for commit SHA: %s", data["sha"]
+                )
 
     def __load_pull_requests(self) -> None:
         """Create Pull Request nodes and link."""
+        logger.info("Loading pull requests...")
         for pr in self.pull_requests.itertuples(index=False):
             data = self.transform(pr)
             node = self.create_node(data, "PullRequest", "id")
+            logger.debug(f"Created PullRequest node: {pr.title}")
 
             repository_node = self.get_node("Repository", full_name=pr.repository)
-            self.create_relationship(repository_node, "has", node)
+            if repository_node:
+                self.create_relationship(repository_node, "has", node)
 
             if pr.labels:
                 labels = json.loads(pr.labels)
@@ -198,12 +241,12 @@ class ExtractCIRO(ExtractBase):
                 if commit_node:
                     self.create_relationship(node, "merged", commit_node)
 
-            logger.info(f"Creating links between users and pull_request {pr.title}")
+            logger.info(f"Linking users to pull request: {pr.title}")
             self._link_issue_to_users(node, pr)
 
     def run(self) -> None:
         """Run the full extraction and persistence process."""
-        logger.info("🔄 Extracting CIRO data ...")
+        logger.info("🔄 Starting CIRO extraction pipeline...")
         self.fetch_data()
         self.__load_labels()
         self.__load_milestones()
