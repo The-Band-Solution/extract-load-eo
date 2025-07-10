@@ -24,19 +24,19 @@ def main() -> None:
     try:
         # Run the EO extractor (Teams, Members, Projects)
         logger.info("Running ExtractEO (Teams, Members, Projects)...")
-        ExtractEO().run()
+        #ExtractEO().run()
         logger.info("ExtractEO completed successfully.")
 
         # Run the CMPO extractor (Repositories, Commits, Branches, Projects)
         logger.info(
             "Running ExtractCMPO (Repositories, Commits, Branches, Projects)..."
         )
-        ExtractCMPO().run()
+        #ExtractCMPO().run()
         logger.info("ExtractCMPO completed successfully.")
 
         # Run the CIRO extractor (Issues, Milestones, Pull Requests, Labels)
         logger.info(
-            "Running ExtractCIRO (Issues, Milestones, Pull Requests, Labels)..."
+        "Running ExtractCIRO (Issues, Milestones, Pull Requests, Labels)..."
         )
         ExtractCIRO().run()
         logger.info("ExtractCIRO completed successfully.")

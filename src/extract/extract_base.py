@@ -69,15 +69,13 @@ class ExtractBase(ABC):
             if not organization_id:
                 logger.warning("ORGANIZATION_ID environment variable is not set.")
 
-            self.config_node = self.sink.get_node("Config", id=organization_id)
+            self.config_node = self.sink.get_node(f"Config_{self.__class__.__name__}", id=organization_id)
 
             if self.config_node is not None:
                 config["start_date"] = self.config_node["last_retrieve_date"]
                 logger.info(f"Using start_date: {config['start_date']}")
-            else:
-                logger.info("No existing Config node found.")
-                self.__create_retrieve()  # Ensure config_node is created if not exists
-
+                pass
+            
             try:
                 self.source = ab.get_source(
                     "source-github",
@@ -309,7 +307,7 @@ class ExtractBase(ABC):
             )
             raise
 
-    def __create_retrieve(self) -> None:
+    def create_config_domain(self,name:str) -> None:
         """Load retrieve date."""
         logger.info("Creating retrieve date configuration node.")
         today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -325,7 +323,7 @@ class ExtractBase(ABC):
             return
 
         self.config_node = Node(
-            "Config",
+            f"Config_{self.__class__.__name__}",
             id=organization_id,
             name=organization_name,
             last_retrieve_date=start_date,

@@ -83,4 +83,5 @@ class ExtractEO(ExtractBase):
         self.__load_project()
         self.__load_team()
         self.__load_team_member()
+        self.create_config_domain("eo")
         self.logger.info("✅ Extraction completed successfully!")

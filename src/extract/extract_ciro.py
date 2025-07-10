@@ -92,6 +92,11 @@ class ExtractCIRO(ExtractBase):
             self._link_issue_to_milestone(node, issue)
             self._link_issue_to_users(node, issue)
             self._link_issue_to_labels(node, issue)
+            self._link_issue_to_pull_request(node,issue)
+    
+    def _link_issue_to_pull_request(self, node: Node, issue: Any) -> None:
+        """create a link bettween issue and pullrquest"""
+        print (issue)
 
     def _create_issue_node(self, data: dict[str, Any], issue: Any) -> Node:
         """Create the Issue node in Neo4j."""
@@ -165,6 +170,17 @@ class ExtractCIRO(ExtractBase):
             self.logger.warning(
                 f"User node not found: {login} for {rel_type} on {issue_title}"
             )
+            user.id = user.login
+            user.name = user.login
+                    
+            user_node = self.create_node(user.__dict__, "Person", "id")
+            self.create_relationship(user_node, "present_in", self.organization_node)
+            self.create_relationship(node, rel_type, user_node)
+          
+            self.logger.info(
+                f"Linked {rel_type} between Issue and User: {login} - {issue_title}"
+            )
+
 
     def _link_issue_to_labels(self, node: Node, issue: Any) -> None:
         """Link the Issue to its associated Labels."""

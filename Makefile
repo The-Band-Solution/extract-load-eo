@@ -5,6 +5,9 @@ SRC_DIR=src
 test:
 	PYTHONPATH=$(SRC_DIR) pytest -s -v
 up:
-	docker compose up --build
+	docker-compose up --build
 down:
-	docker compose down -v
+	docker-compose down -v
+reload:
+	docker-compose down -v
+	docker-compose up --build

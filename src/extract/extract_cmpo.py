@@ -121,19 +121,36 @@ class ExtractCMPO(ExtractBase):
                     )
                 else:
                     self.logger.warning(f"Author not found: {user.login}")
+                    user.id = user.login
+                    user.name = user.login
+                    
+                    person_node = self.create_node(user.__dict__, "Person", "id")
+                    self.create_relationship(person_node, "present_in", self.organization_node)
+                    self.create_relationship(node, "created_by", person_node)
+                    self.logger.info(
+                        f"Linked author {user.login} to commit {commit.sha}"
+                    )
 
             # Committer
             if commit.committer:
                 user = self.transform_object(commit.committer)
                 user_node = self.get_node("Person", id=user.login)
                 if user_node:
-                    self.create_relationship(node, "created_by", user_node)
+                    self.create_relationship(node, "commited_by", user_node)
                     self.logger.debug(
                         f"Linked committer {user.login} to commit {commit.sha}"
                     )
                 else:
                     self.logger.warning(f"Committer not found: {user.login}")
-
+                    user.id = user.login
+                    user.name = user.login
+                    
+                    person_node = self.create_node(user.__dict__, "Person", "id")
+                    self.create_relationship(person_node, "present_in", self.organization_node)
+                    self.create_relationship(node, "commited_by", person_node)
+                    self.logger.info(
+                        f"Linked committer {user.login} to commit {commit.sha}"
+                    )
             # Branch
             branch_id = commit.branch + "-" + commit.repository
             branch_node = self.get_node("Branch", id=branch_id)
@@ -201,4 +218,5 @@ class ExtractCMPO(ExtractBase):
         self.__load_branchs()
         self.__load_commits()
         self.__create_relation_commits()
+        self.create_config_domain("cmpo")
         self.logger.info("✅ CMPO extraction completed.")
