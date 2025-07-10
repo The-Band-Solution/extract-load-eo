@@ -15,11 +15,18 @@ This project connects to the GitHub API to extract **teams** and **members** fro
 
 ---
 
-## 🧱 Ontological Structure (SEON/UFO-C)
+## 🧱 Continuum (SEON/UFO-C)
+
+Continuous Software Engineering (CSE) is a complex domain that involves Business, Software Engineering, Operations, and Innovation domains to deliver products or services thatfulfill the customers’ demand. Aiming to provide knowledge about CSE, we have worked on an ontology network, called Continuum1, which aims at representing the conceptualization related to the processes involved in CSE. In the SE big picture, CSE appears as a (large) subdomain involving other subdomains. Thus, we developed Continuum as a subnetwork of [SEON](https://dev.nemo.inf.ufes.br/seon/). In this sense, we reused some elements of SEON (such as its architecture, integration mechanisms, and networked ontologies) to develop Continuum.
+
+![Continuum](./figures/continuum.png)
+
+
+### Enterprise Ontology (EO)
 
 The Enterprise Ontology (EO) aims at establishing a common conceptualization on the Entreprise domain, including organizations, organizational units, people, roles, teams and projects.
 
-![texto alternativo](eo.png)
+![texto alternativo](./figures/eo.png)
 
 
 ```plaintext
@@ -28,6 +35,16 @@ The Enterprise Ontology (EO) aims at establishing a common conceptualization on 
 (:TeamMembership)-[:IS_TO_PLAY]->(:OrganizationalRole)
 (:TeamMembership)-[:DONE_FOR]->(:Team)
 ````
+
+
+### Configuration Management Process Ontology (CMPO)
+
+The Configuration Management Process Ontology (CMPO) aims at representing the activities, artifacts and stakeholders involved in the software Configuration Management Process. Since CMPO can be applied in the context of several SE subdomains, it describes some general notions applicable for diverse SEON concepts.
+
+
+### Continuous Integration Reference Ontology (CIRO)
+
+
 
 ---
 
