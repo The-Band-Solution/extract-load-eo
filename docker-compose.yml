@@ -9,6 +9,11 @@ services:
       - REPOSITORIES=${REPOSITORIES}
       - ORGANIZATION_ID=${ORGANIZATION_ID}
       - ORGANIZATION=${ORGANIZATION}
+      - DB_HOST_LOCAL=${DB_HOST_LOCAL}
+      - DB_PORT_LOCAL=${DB_PORT_LOCAL}
+      - DB_USER_LOCAL=${DB_USER_LOCAL}
+      - DB_PASSWORD_LOCAL=${DB_PASSWORD_LOCAL}
+      - DB_NAME_LOCAL=${DB_NAME_LOCAL}
       - LOG_DIR=/logs
     networks:
       - theband-network

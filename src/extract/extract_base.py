@@ -9,9 +9,15 @@ import airbyte as ab
 import pandas as pd
 from dotenv import load_dotenv
 from py2neo import Node, Relationship
-
+from airbyte.caches import PostgresCache
 from sink.sink_neo4j import SinkNeo4j
 from src.config.logging_config import LoggerFactory
+
+from datetime import datetime
+from pandas import Timestamp
+from typing import Any
+import pandas as pd
+
 
 logger = LoggerFactory.get_logger("extractor")
 
@@ -106,8 +112,18 @@ class ExtractBase(ABC):
         logger.info(f"Selecting streams to load: {self.streams}")
         self.source.select_streams(self.streams)  # Select streams to load
 
-        logger.info("Initializing DuckDB cache.")
-        self.cache = ab.get_default_cache()  # Initialize DuckDB cache
+        
+        logger.info("Initializing Postgres Cache.")
+        self.cache = PostgresCache(
+                
+            host=os.getenv("DB_HOST_LOCAL", "localhost"),
+            port=os.getenv("DB_PORT_LOCAL", "localhost"),
+            username=os.getenv("DB_USER_LOCAL", "localhost"),
+            password=os.getenv("DB_PASSWORD_LOCAL", "localhost"),
+            database=os.getenv("DB_NAME_LOCAL", "localhost")
+                
+        )
+         
 
         logger.info("Reading data from Airbyte source into cache...")
         try:
@@ -116,6 +132,32 @@ class ExtractBase(ABC):
         except Exception as e:
             logger.error(f"Failed to load data from Airbyte source: {e}")
             raise
+
+    def flatten_nested_dict(self, d: dict, parent_key='', sep='.') -> dict:
+        items = []
+        for k, v in d.items():
+            new_key = f"{parent_key}{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.extend(self.flatten_nested_dict(v, new_key + sep, sep=sep).items())
+            else:
+                items.append((new_key, v))
+        return dict(items)        
+
+    def data_clean (self, data: Any) -> Any:
+        clean = {}
+        for k, v in data.items():
+            if isinstance(v, dict):
+                flattened = self.flatten_nested_dict(v, parent_key=k)
+                for fk, fv in flattened.items():
+                    if isinstance(fv, (str, int, float, bool)) or fv is None:
+                        clean[fk] = fv
+                    else:
+                        clean[fk] = str(fv)
+            elif isinstance(v, (str, int, float, bool)) or v is None:
+                clean[k] = v
+            else:
+                clean[k] = str(v)
+        return clean
 
     def transform(self, value: Any) -> Any:
         """Transform a record from Airbyte into a clean dictionary.
@@ -138,9 +180,13 @@ class ExtractBase(ABC):
             for k, v in value._asdict().items()  # Convert to dict
             if not k.startswith("_airbyte")  # Remove metadata fields
         }
-        logger.debug(f"Transformed record: {data}")
-        return data
 
+        clean = self.data_clean(data)
+        logger.debug(f"Transformed record: {clean}")
+        
+        return clean
+
+        
     def save_node(self, node: Node, type: str, key: str) -> Node:
         """Persist a node into Neo4j.
 
