@@ -96,7 +96,15 @@ class ExtractCIRO(ExtractBase):
     
     def _link_issue_to_pull_request(self, node: Node, issue: Any) -> None:
         """create a link bettween issue and pullrquest"""
-        print (issue)
+        pullrequest = issue.pull_request
+        pull_request_node = self.get_node("PullRequest", url=pullrequest["url"])
+        url = pullrequest["url"]
+        self.logger.debug(
+                f"Processing ({url} pull request for issue: {issue.title}"
+            )
+        
+        self.create_relationship(pull_request_node, "has", node)
+            
 
     def _create_issue_node(self, data: dict[str, Any], issue: Any) -> Node:
         """Create the Issue node in Neo4j."""
@@ -150,6 +158,15 @@ class ExtractCIRO(ExtractBase):
                 self._create_user_relationship(
                     node, assignee, "assigned_to", issue.title
                 )
+        if issue.requested_reviewers:
+            reviewers = issue.requested_reviewers
+            self.logger.debug(
+                f"Processing {len(reviewers)} reviewers for issue: {issue.title}"
+            )
+            for review in reviewers:
+               self._create_user_relationship(
+                    node, review, "review_by", issue.title
+                ) 
 
     def _create_user_relationship(
         self, node: Node, user_data: Any, rel_type: str, issue_title: str
