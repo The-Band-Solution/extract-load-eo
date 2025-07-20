@@ -350,7 +350,7 @@ class ExtractBase(ABC):
         data["created_node_at"] = datetime.now().isoformat()
         node = Node(node_type, **data)
         try:
-            self.sink.save_node(node, node_type, id_field)
+            self.sink.save_node(node, node_type.strip().lower(), id_field)
             logger.info(
                 f"Node '{node_type}' - '{data.get(id_field)}' created and saved."
             )

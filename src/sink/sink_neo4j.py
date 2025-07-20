@@ -69,5 +69,5 @@ class SinkNeo4j:
             Node: The first matching node, or None if no node matches.
 
         """  # noqa: D205, D401
-        matcher = self.graph.nodes.match(type, **properties)
+        matcher = self.graph.nodes.match(type.strip().lower(), **properties)
         return matcher.first()
