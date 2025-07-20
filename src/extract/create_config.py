@@ -1,6 +1,6 @@
 import os  # noqa: I001
 from sink.sink_neo4j import SinkNeo4j  # noqa: I001
-from datetime import datetime  #  noqa: I001
+from datetime import datetime , timezone #  noqa: I001
 from py2neo import Node  # noqa: I001
 from typing import Any  # noqa: I001
 
@@ -22,8 +22,11 @@ class CreateConfig:
 
     def run(self) -> None:
         """Load retrieve date."""  # noqa: D401
-        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        start_date = today.isoformat() + "Z"
+        
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        # Remove timezone info para formatar como string ISO sem fuso
+        start_date = today.replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S") + 'Z'
+
         self.config_node = Node(
             "Config",
             id=os.getenv("ORGANIZATION_ID", ""),

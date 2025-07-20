@@ -6,14 +6,13 @@ from types import SimpleNamespace
 from typing import Any
 
 import airbyte as ab
-import pandas as pd
+import numpy as np
 from dotenv import load_dotenv
 from py2neo import Node, Relationship
 from airbyte.caches import PostgresCache
 from sink.sink_neo4j import SinkNeo4j
 from src.config.logging_config import LoggerFactory
-
-from datetime import datetime
+from datetime import datetime, timezone
 from pandas import Timestamp
 from typing import Any
 import pandas as pd
@@ -80,7 +79,6 @@ class ExtractBase(ABC):
             if self.config_node is not None:
                 config["start_date"] = self.config_node["last_retrieve_date"]
                 logger.info(f"Using start_date: {config['start_date']}")
-                pass
             
             try:
                 self.source = ab.get_source(
@@ -159,6 +157,16 @@ class ExtractBase(ABC):
                 clean[k] = str(v)
         return clean
 
+
+    def safe_nan_to_none(self, v):
+        try:
+            if isinstance(v, (list, np.ndarray, pd.Series)):
+                return [None if pd.isna(item) else item for item in v]
+            return None if pd.isna(v) else v
+        except TypeError:
+            return v
+
+
     def transform(self, value: Any) -> Any:
         """Transform a record from Airbyte into a clean dictionary.
 
@@ -176,7 +184,7 @@ class ExtractBase(ABC):
         """
         logger.debug(f"Transforming record: {value}")
         data = {
-            k: (v if not pd.isna(v) else None)  # Replace NaN with None
+            k: self.safe_nan_to_none(v)
             for k, v in value._asdict().items()  # Convert to dict
             if not k.startswith("_airbyte")  # Remove metadata fields
         }
@@ -356,7 +364,7 @@ class ExtractBase(ABC):
     def create_config_domain(self,name:str) -> None:
         """Load retrieve date."""
         logger.info("Creating retrieve date configuration node.")
-        today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         start_date = today.isoformat() + "Z"
         organization_id = os.getenv("ORGANIZATION_ID", "")
         organization_name = os.getenv("ORGANIZATION", "")

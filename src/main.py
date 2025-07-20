@@ -31,14 +31,14 @@ def main() -> None:
         logger.info(
             "Running ExtractCMPO (Repositories, Commits, Branches, Projects)..."
         )
-        #ExtractCMPO().run()
+        ExtractCMPO().run()
         logger.info("ExtractCMPO completed successfully.")
 
         # Run the CIRO extractor (Issues, Milestones, Pull Requests, Labels)
         logger.info(
         "Running ExtractCIRO (Issues, Milestones, Pull Requests, Labels)..."
         )
-        #ExtractCIRO().run()
+        ExtractCIRO().run()
         logger.info("ExtractCIRO completed successfully.")
 
         logger.info("✅ Extraction pipeline completed successfully")

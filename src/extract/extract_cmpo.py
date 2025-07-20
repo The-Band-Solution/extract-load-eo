@@ -83,6 +83,27 @@ class ExtractCMPO(ExtractBase):
                 flat[prefix + k] = v
         return flat
 
+    def parse_json_from_db(self, raw_json):
+        """
+        Parse safely a JSON field from the database, which may be:
+        - a dict (already parsed),
+        - a string (to be parsed),
+        - or invalid.
+        """
+        if isinstance(raw_json, dict):
+            return [raw_json]  # retorna como lista, se for um único dict
+        elif isinstance(raw_json, list):
+            return raw_json
+        elif isinstance(raw_json, str):
+            try:
+                return json.loads(raw_json.strip())
+            except json.JSONDecodeError as e:
+                print(f"[ERRO] Falha ao carregar JSON: {e}")
+                return []
+        else:
+            print(f"[ERRO] Tipo inesperado: {type(raw_json)}")
+            return []
+
     def __load_commits(self) -> None:
         """Load commits."""
         self.logger.info("Loading commits...")
@@ -91,16 +112,19 @@ class ExtractCMPO(ExtractBase):
             data["id"] = data["sha"]
             self.logger.debug("Commit transformed: %s", data["id"])
 
+
             try:
-                commit_data = json.loads(commit.commit)
+               combined = {**data, **commit.commit}
+                
             except Exception as e:
                 self.logger.warning(f"Invalid commit JSON for {commit.sha}: {e}")
                 continue
 
-            node_data = {**data, **self.flatten_dict(commit_data, "")}
+            node_data = {**data, **self.flatten_dict(combined, "")}
             node = self.create_node(node_data, "Commit", "id")
 
             repository_node = self.get_node("Repository", full_name=commit.repository)
+            
             if repository_node:
                 self.create_relationship(repository_node, "has", node)
                 self.create_relationship(node, "belongs_to", repository_node)
@@ -109,47 +133,49 @@ class ExtractCMPO(ExtractBase):
                     "Repository not found for commit: %s", 
                     commit.repository
                 )
-
             # Author
             if commit.author:
-                user = self.transform_object(commit.author)
-                user_node = self.get_node("Person", id=user.login)
+                author = commit.author
+                login = author["login"]
+                user_node = self.get_node("Person", id=login)
+                
                 if user_node:
                     self.create_relationship(node, "created_by", user_node)
                     self.logger.debug(
-                        f"Linked author {user.login} to commit {commit.sha}"
+                        f"Linked author {login} to commit {commit.sha}"
                     )
                 else:
-                    self.logger.warning(f"Author not found: {user.login}")
-                    user.id = user.login
-                    user.name = user.login
+                    self.logger.warning(f"Author not found: {login}")
+                    author["id"] = login
+                    author["name"] = login
                     
-                    person_node = self.create_node(user.__dict__, "Person", "id")
+                    person_node = self.create_node(author, "Person", "id")
                     self.create_relationship(person_node, "present_in", self.organization_node)
                     self.create_relationship(node, "created_by", person_node)
                     self.logger.info(
-                        f"Linked author {user.login} to commit {commit.sha}"
+                        f"Linked author {login} to commit {commit.sha}"
                     )
-
+            
             # Committer
             if commit.committer:
-                user = self.transform_object(commit.committer)
-                user_node = self.get_node("Person", id=user.login)
+                committer = commit.committer
+                login = committer["login"]
+                user_node = self.get_node("Person", id=login)
                 if user_node:
                     self.create_relationship(node, "commited_by", user_node)
                     self.logger.debug(
-                        f"Linked committer {user.login} to commit {commit.sha}"
+                        f"Linked committer {login} to commit {commit.sha}"
                     )
                 else:
-                    self.logger.warning(f"Committer not found: {user.login}")
-                    user.id = user.login
-                    user.name = user.login
+                    self.logger.warning(f"Committer not found: {login}")
+                    committer["id "]= login
+                    committer["name"] = login
                     
-                    person_node = self.create_node(user.__dict__, "Person", "id")
+                    person_node = self.create_node(committer, "Person", "id")
                     self.create_relationship(person_node, "present_in", self.organization_node)
                     self.create_relationship(node, "commited_by", person_node)
                     self.logger.info(
-                        f"Linked committer {user.login} to commit {commit.sha}"
+                        f"Linked committer {login} to commit {commit.sha}"
                     )
             # Branch
             branch_id = commit.branch + "-" + commit.repository
@@ -160,17 +186,15 @@ class ExtractCMPO(ExtractBase):
                 self.logger.debug(f"Linked commit {commit.sha} to branch {branch_id}")
             else:
                 self.logger.warning(f"Branch not found: {branch_id}")
+            
 
     def __create_relation_commits(self) -> None:
+        
         """Create parent relationships between commits."""
         self.logger.info("Creating parent relationships between commits...")
         for commit in self.commits.itertuples(index=False):
-            try:
-                parents = json.loads(commit.parents)
-            except Exception as e:
-                self.logger.warning(f"Invalid parent JSON for commit {commit.sha}: {e}")
-                continue
-
+            parents = commit.parents
+            
             for parent in parents:
                 commit_node = self.get_node("Commit", id=commit.sha)
                 parent_node = self.get_node("Commit", id=parent["sha"])
@@ -184,7 +208,7 @@ class ExtractCMPO(ExtractBase):
                         parent["sha"],
                         commit.sha,
                     )
-
+                
     def __load_branchs(self) -> None:
         """Load branches."""
         self.logger.info("Loading branches...")
@@ -218,5 +242,5 @@ class ExtractCMPO(ExtractBase):
         self.__load_branchs()
         self.__load_commits()
         self.__create_relation_commits()
-        self.create_config_domain("cmpo")
+        #self.create_config_domain("cmpo")
         self.logger.info("✅ CMPO extraction completed.")
