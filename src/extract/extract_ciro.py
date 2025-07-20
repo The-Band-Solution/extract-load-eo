@@ -97,15 +97,16 @@ class ExtractCIRO(ExtractBase):
     def _link_issue_to_pull_request(self, node: Node, issue: Any) -> None:
         """create a link bettween issue and pullrquest"""
         pullrequest = issue.pull_request
-        pull_request_node = self.get_node("PullRequest", url=pullrequest["url"])
-        url = pullrequest["url"]
-        self.logger.debug(
-                f"Processing ({url} pull request for issue: {issue.title}"
-            )
-        
-        self.create_relationship(pull_request_node, "has", node)
+        if pullrequest:
+            pull_request_node = self.get_node("PullRequest", url=pullrequest["url"])
+            url = pullrequest["url"]
+            self.logger.debug(
+                    f"Processing ({url} pull request for issue: {issue.title}"
+                )
             
+            self.create_relationship(pull_request_node, "has", node)
 
+        
     def _create_issue_node(self, data: dict[str, Any], issue: Any) -> Node:
         """Create the Issue node in Neo4j."""
         self.logger.debug("Creating Issue node...")
@@ -158,15 +159,7 @@ class ExtractCIRO(ExtractBase):
                 self._create_user_relationship(
                     node, assignee, "assigned_to", issue.title
                 )
-        if issue.requested_reviewers:
-            reviewers = issue.requested_reviewers
-            self.logger.debug(
-                f"Processing {len(reviewers)} reviewers for issue: {issue.title}"
-            )
-            for review in reviewers:
-               self._create_user_relationship(
-                    node, review, "review_by", issue.title
-                ) 
+         
 
     def _create_user_relationship(
         self, node: Node, user_data: Any, rel_type: str, issue_title: str
@@ -285,6 +278,35 @@ class ExtractCIRO(ExtractBase):
 
             self.logger.info(f"Linking users to pull request: {pr.title}")
             self._link_issue_to_users(node, pr)
+            
+            if pr.requested_reviewers:
+                reviewers = pr.requested_reviewers
+                self.logger.debug(
+                    f"Procssing {len(reviewers)} reviewers for pull: {pr.title}"
+                )
+                for reviewer in reviewers:
+                    login = reviewer.get("login")
+                    user_node = self.get_node("Person", id=login)
+                    if user_node:
+                        self.create_relationship(
+                                node, "reviewed_by", user_node)
+                        self.logger.info(
+                            f"Pull Request {node} reviewed by : {user_node}"
+                        )
+                    else:
+                        login = reviewer["login"]
+                        reviewer["id"] = login
+                        reviewer["name"] = login
+                                
+                        user_node = self.create_node(reviewer, "Person", "id")
+                        self.create_relationship(user_node, "present_in", self.organization_node)
+                        self.create_relationship(node, "reviewed_by", user_node)
+                    
+                        self.logger.info(
+                            f"Linked present_in between Pull Request and Reviewe: {login} - {node}"
+                        )   
+    
+
 
     def run(self) -> None:
         """Run the full extraction and persistence process."""
